@@ -2,6 +2,55 @@
 
 Web Programming 2026–2027 — optie 1: digitaal onderhouds- en reparatielogboek.
 
+## Starten met Docker
+
+Installeer en start **Docker Desktop** (met Docker Compose). Je hoeft hiervoor
+geen Node.js of npm lokaal te installeren. Stop wel eerst een eventuele
+`npm start`-server op poort 3000.
+
+Start de applicatie vanuit de projectmap:
+
+```powershell
+docker compose up --build -d
+```
+
+Open **http://localhost:3000**. Controleer de API via
+**http://localhost:3000/api/health** (antwoord: `{"status":"ok"}`).
+
+De container draait met Node.js 24 en maakt een SQLite-database aan op
+`/app/data/maintenance.sqlite`. De map `/app/data` is gekoppeld aan
+het Docker-volume `maintenance_data`. Toegevoegde toestellen blijven dus
+bewaard als je de container stopt, verwijdert of opnieuw opbouwt.
+
+Je kunt de opslag controleren door een toestel toe te voegen via de interface,
+de applicatie te stoppen en opnieuw te starten:
+
+```powershell
+docker compose down
+docker compose up -d
+```
+
+Vernieuw daarna de pagina: het toestel hoort nog aanwezig te zijn.
+
+Handige commando's:
+
+```powershell
+docker compose logs -f app
+docker compose down
+```
+
+**Let op:** gebruik geen `docker compose down -v` als je de gegevens
+wilt behouden: `-v` verwijdert ook het databasevolume.
+
+**Belangrijk:** de SQLite-database in het Docker-volume staat los van het
+lokale bestand `data/maintenance.sqlite` dat je via `npm start` gebruikt.
+Eerder lokaal ingevoerde toestellen verdwijnen niet, maar verschijnen
+niet automatisch in de Docker-installatie. Ze blijven in je lokale database
+beschikbaar wanneer je weer `npm start` gebruikt.
+
+Op dit moment bevat een nieuwe database nog geen voorbeeldgegevens of
+demo-gebruikers. Die horen bij de latere projectvereisten.
+
 ## Lokaal starten
 
 **Node.js 22.13+ vereist; Node.js 24 LTS aanbevolen** voor de ingebouwde SQLite-module.

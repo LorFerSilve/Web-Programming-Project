@@ -1,0 +1,10 @@
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - maintenance_data:/app/data
+
+volumes:
+  maintenance_data:

@@ -13,7 +13,7 @@
 - [x] Gegevens **persistent op de server** opslaan (voorstel: SQLite).
 - [x] Frontend en backend laten communiceren via HTTP/`fetch`.
 - [x] Een overzichtelijke interface maken voor desktop én smartphone.
-- [ ] De volledige applicatie kunnen opstarten met **Docker**.
+- [x] De volledige applicatie kunnen opstarten met **Docker**.
 
 **Eenvoudige aanpak:** één Express-app die de frontend en API aanbiedt, één SQLite-database en een map voor uploads. Geen extra framework nodig.
 
