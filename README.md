@@ -4,35 +4,49 @@ Web Programming 2026–2027 — optie 1: digitaal onderhouds- en reparatielogboe
 
 ## Lokaal starten
 
-Je hebt **Node.js 20 of nieuwer** en npm nodig.
+**Node.js 22.13+ vereist; Node.js 24 LTS aanbevolen** voor de ingebouwde SQLite-module.
 
 ```bash
 npm install
 npm start
 ```
 
-Open daarna **http://localhost:3000** in je browser. Express serveert de bestaande frontend uit `public/`.
+Open **http://localhost:3000** voor de bestaande frontend.
+Controleer de backend via **http://localhost:3000/api/health** (`{"status":"ok"}`).
 
-De backend controleren kan via **http://localhost:3000/api/health**. Die route geeft `{"status":"ok"}` terug.
+## Persistente opslag
 
-Tests uitvoeren:
+De server maakt bij de eerste start automatisch `data/maintenance.sqlite` aan.
+Toestellen worden in deze SQLite-database bewaard, **ook na herstart van Node.js**.
+De database staat in `.gitignore`, zodat lokale gegevens niet op GitHub belanden.
+Met de optionele omgevingsvariabele `DB_PATH` kun je de bestandslocatie wijzigen
+(bijvoorbeeld voor een latere Docker-volume).
+
+De eenvoudige toestellen-API is alvast beschikbaar:
+
+- `GET /api/devices` geeft de opgeslagen toestellen als JSON terug.
+- `POST /api/devices` voegt een toestel toe met JSON-velden `name`, `type`, optioneel `brand`, `model` en `nextMaintenance` (YYYY-MM-DD).
+
+Voorbeeld in PowerShell (terwijl `npm start` draait):
+
+```powershell
+Invoke-RestMethod http://localhost:3000/api/devices -Method Post -ContentType 'application/json' -Body '{"name":"Stadsfiets","type":"fiets","brand":"Gazelle"}'
+Invoke-RestMethod http://localhost:3000/api/devices
+```
+
+**Belangrijk:** de bestaande frontend gebruikt nog altijd zijn eigen voorbeeldtoestellen en slaat formuliergegevens alleen in het browsergeheugen op. Het koppelen van de frontend aan deze API via `fetch` is de **volgende** stap in `checklist.md`.
+
+## Tests
 
 ```bash
 npm test
 ```
 
-## Huidige functionaliteit
-
-- Responsive HTML/CSS/JavaScript-frontend met voorbeeldtoestellen, zoeken, filteren en een toevoegformulier.
-- Node.js/Express-server die de frontendbestanden aanbiedt.
-- `GET /api/health` als eenvoudige JSON-test van de backend.
-
-**Nog niet geïmplementeerd:** database, server-side opslag van toestellen en communicatie via `fetch` tussen frontend en backend. Het toevoegformulier slaat gegevens voorlopig alleen in het browsergeheugen op. Dit zijn afzonderlijke vervolgstappen in `checklist.md`.
-
 ## Projectstructuur
 
-- `server.js`: start de HTTP-server.
-- `src/app.js`: Express-app, routes en statische bestanden.
-- `public/`: de bestaande frontend (`index.html`, `styles.css`, `app.js`).
-- `test/server.test.js`: HTTP-tests met de ingebouwde Node.js-testmodule.
-- `checklist.md`: voortgang van alle projectvereisten.
+- `server.js`: start Express en opent de database.
+- `src/app.js`: Express-routes en statische frontend.
+- `src/database.js`: SQLite-schema en opslagfuncties.
+- `public/`: HTML, CSS en vanilla JavaScript.
+- `test/`: API- en database-tests.
+- `checklist.md`: voortgang van het project.
