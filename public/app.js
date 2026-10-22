@@ -109,7 +109,8 @@ function showDetails(device) {
   details.replaceChildren();
   for (const [label, value] of [
     ["Categorie", categories[device.type]], ["Merk", device.brand || "—"],
-    ["Model", device.model || "—"], ["Volgend onderhoud", dateLabel(device.nextMaintenance)]
+    ["Model", device.model || "—"], ["Aankoopdatum", device.purchaseDate ? dateLabel(device.purchaseDate) : "Niet ingevuld"],
+    ["Volgend onderhoud", dateLabel(device.nextMaintenance)]
   ]) {
     details.append(make("dt", "", label), make("dd", "", value));
   }
@@ -131,7 +132,7 @@ function openDeviceForm(device = null) {
   saveButton.textContent = device ? "Opslaan" : "Toevoegen";
 
   if (device) {
-    for (const key of ["name", "type", "brand", "model", "nextMaintenance"]) {
+    for (const key of ["name", "type", "brand", "model", "purchaseDate", "nextMaintenance"]) {
       addForm.elements.namedItem(key).value = device[key] || "";
     }
   }
@@ -205,6 +206,7 @@ addForm.addEventListener("submit", async event => {
     type: String(values.get("type") || ""),
     brand: String(values.get("brand") || "").trim(),
     model: String(values.get("model") || "").trim(),
+    purchaseDate: String(values.get("purchaseDate") || ""),
     nextMaintenance: String(values.get("nextMaintenance") || "")
   };
   if (!device.name) {

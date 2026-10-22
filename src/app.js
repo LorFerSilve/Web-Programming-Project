@@ -13,12 +13,13 @@ function validDate(value) {
 
 function parseDevice(body) {
   if (!body || typeof body !== "object" || Array.isArray(body)) return null;
-  const { name, type, brand = "", model = "", nextMaintenance = "" } = body;
+  const { name, type, brand = "", model = "", nextMaintenance = "", purchaseDate = "" } = body;
   if (typeof name !== "string" || !name.trim() || name.trim().length > 70 ||
       !deviceTypes.has(type) || typeof brand !== "string" || brand.length > 70 ||
       typeof model !== "string" || model.length > 70 ||
-      typeof nextMaintenance !== "string" || !validDate(nextMaintenance)) return null;
-  return { name: name.trim(), type, brand: brand.trim(), model: model.trim(), nextMaintenance };
+      typeof nextMaintenance !== "string" || !validDate(nextMaintenance) ||
+      typeof purchaseDate !== "string" || !validDate(purchaseDate)) return null;
+  return { name: name.trim(), type, brand: brand.trim(), model: model.trim(), nextMaintenance, purchaseDate };
 }
 
 function parseId(value) {

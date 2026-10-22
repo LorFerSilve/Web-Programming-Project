@@ -74,7 +74,7 @@ Met de optionele omgevingsvariabele `DB_PATH` kun je de bestandslocatie wijzigen
 De eenvoudige toestellen-API is alvast beschikbaar:
 
 - `GET /api/devices` geeft de opgeslagen toestellen als JSON terug.
-- `POST /api/devices` voegt een toestel toe met JSON-velden `name`, `type`, optioneel `brand`, `model` en `nextMaintenance` (YYYY-MM-DD).
+- `POST /api/devices` voegt een toestel toe met JSON-velden `name`, `type`, optioneel `brand`, `model`, `purchaseDate` en `nextMaintenance` (datums als YYYY-MM-DD).
 - `PUT /api/devices/:id` past de gegevens van een bestaand toestel aan (volledig JSON-object).
 - `DELETE /api/devices/:id` verwijdert een toestel na bevestiging in de frontend (HTTP 204).
 
@@ -84,6 +84,8 @@ Voorbeeld in PowerShell (terwijl `npm start` draait):
 Invoke-RestMethod http://localhost:3000/api/devices -Method Post -ContentType 'application/json' -Body '{"name":"Stadsfiets","type":"fiets","brand":"Gazelle"}'
 Invoke-RestMethod http://localhost:3000/api/devices
 ```
+
+De **aankoopdatum** is optioneel en wordt bij toevoegen, bewerken en bekijken van een toestel ondersteund. Bestaande SQLite-databases worden bij het opstarten automatisch uitgebreid met de nieuwe kolom; bestaande toestellen en hun overige gegevens blijven behouden.
 
 **Belangrijk:** het dashboard toont nu uitsluitend toestellen uit SQLite, dus een nieuwe database heeft eerst een lege lijst. Gebruik **Toestel toevoegen** in de browser of de API om nieuwe toestellen aan te maken. Via **Bekijk details** kun je een toestel bewerken of na bevestiging verwijderen. Alle wijzigingen worden in SQLite bewaard. Onderhoud, defecten en gebruikersbeheer volgen in latere stappen uit `checklist.md`.
 

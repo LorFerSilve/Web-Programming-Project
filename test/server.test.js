@@ -147,3 +147,38 @@ test("PUT en DELETE controleren toestel-ID en invoer", async () => {
     db.close();
   }
 });
+
+test("Aankoopdatum wordt via POST en PUT bewaard en gevalideerd", async () => {
+  const db = openDatabase(":memory:");
+  const server = createApp(db).listen(0, "127.0.0.1");
+  try {
+    await once(server, "listening");
+    const base = `http://127.0.0.1:${server.address().port}`;
+    const headers = { "Content-Type": "application/json" };
+
+    const bad = await fetch(`${base}/api/devices`, {
+      method: "POST", headers,
+      body: JSON.stringify({ name: "Fiets", type: "fiets", purchaseDate: "2026-02-30" })
+    });
+    assert.equal(bad.status, 400);
+
+    const created = await fetch(`${base}/api/devices`, {
+      method: "POST", headers,
+      body: JSON.stringify({ name: "Fiets", type: "fiets", purchaseDate: "2024-06-20" })
+    });
+    assert.equal(created.status, 201);
+    const device = await created.json();
+    assert.equal(device.purchaseDate, "2024-06-20");
+
+    const modified = await fetch(`${base}/api/devices/${device.id}`, {
+      method: "PUT", headers,
+      body: JSON.stringify({ name: "Racefiets", type: "fiets", purchaseDate: "2025-02-14" })
+    });
+    assert.equal(modified.status, 200);
+    assert.equal((await modified.json()).purchaseDate, "2025-02-14");
+    assert.equal((await (await fetch(`${base}/api/devices`)).json())[0].purchaseDate, "2025-02-14");
+  } finally {
+    await new Promise(resolve => server.close(resolve));
+    db.close();
+  }
+});
