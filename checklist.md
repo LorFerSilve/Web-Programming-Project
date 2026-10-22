@@ -12,7 +12,7 @@
 - [x] Backend maken met **Node.js en Express.js**.
 - [x] Gegevens **persistent op de server** opslaan (voorstel: SQLite).
 - [x] Frontend en backend laten communiceren via HTTP/`fetch`.
-- [ ] Een overzichtelijke interface maken voor desktop én smartphone.
+- [x] Een overzichtelijke interface maken voor desktop én smartphone.
 - [ ] De volledige applicatie kunnen opstarten met **Docker**.
 
 **Eenvoudige aanpak:** één Express-app die de frontend en API aanbiedt, één SQLite-database en een map voor uploads. Geen extra framework nodig.

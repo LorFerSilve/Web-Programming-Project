@@ -114,3 +114,22 @@ h2 { margin-bottom: 6px; font-size: 23px; letter-spacing: -.03em; }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 .button:disabled { opacity: .6; cursor: wait; }
 .toast.toast-error { background: #a33333; }
+
+/* Comfortabele aanraakdoelen en correcte tekstomloop op kleine schermen. */
+.main-nav a, .detail-button { display: inline-flex; align-items: center; min-height: 44px; }
+.icon-button { display: inline-grid; place-items: center; min-width: 44px; min-height: 44px; }
+.device-name, .device-model, .maintenance-line { overflow-wrap: anywhere; }
+.modal { max-height: min(90dvh, 800px); overflow-y: auto; }
+
+@media (max-width: 480px) {
+  /* Horizontale samenvattingskaarten worden te smal op smartphones. */
+  .summary { grid-template-columns: 1fr; gap: 10px; margin-block: 20px 40px; }
+  .summary-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto; gap: 2px 16px; align-items: center; min-height: 82px; padding: 14px 18px; }
+  .summary-label { grid-area: 1 / 1; font-size: 13px; }
+  .summary-value { grid-area: 1 / 2 / 3 / 3; font-size: 30px; line-height: 1.1; }
+  .summary-caption { grid-area: 2 / 1; font-size: 12px; overflow-wrap: anywhere; }
+  .modal-actions { position: sticky; bottom: -20px; padding: 12px 0 0; margin-top: 12px; background: #fff; border-top: 1px solid #edf0f4; }
+}
+@media (max-width: 360px) {
+  .modal-heading h2 { font-size: 20px; }
+}

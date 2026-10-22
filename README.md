@@ -50,3 +50,16 @@ npm test
 - `public/`: HTML, CSS en vanilla JavaScript.
 - `test/`: API- en database-tests.
 - `checklist.md`: voortgang van het project.
+
+## Responsive interface
+
+De bestaande interface past zich aan verschillende schermbreedtes aan:
+op desktop staan de toestellen in drie kolommen, op tablet in twee kolommen
+en op smartphone in één kolom. Op smalle telefoons staan ook de
+samenvattingskaarten onder elkaar, blijven knoppen goed bedienbaar en kan
+het toevoegformulier verticaal scrollen.
+
+Je kunt dit zelf controleren met de **Device Toolbar** in de browser
+(`F12` → `Ctrl+Shift+M`) op bijvoorbeeld 320, 390, 768 en 1440 pixels.
+De mobiele interface voor het **registreren van onderhoudsacties en foto's**
+komt later, bij de bijbehorende requirements.
