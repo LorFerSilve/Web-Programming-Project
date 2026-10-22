@@ -20,7 +20,7 @@
         <a href="#dashboard">Overzicht</a>
         <a href="#devices">Toestellen</a>
       </nav>
-      <span class="mode-label">Frontend-demo</span>
+      <span class="mode-label">SQLite-opslag</span>
     </div>
   </header>
 
@@ -36,7 +36,7 @@
 
     <div class="demo-notice" role="note">
       <span aria-hidden="true">ⓘ</span>
-      <p><strong>Dit is een frontend-demo.</strong> De getoonde toestellen zijn voorbeelden. Nieuwe toestellen blijven alleen zichtbaar zolang deze pagina open is; serveropslag volgt later.</p>
+      <p><strong>Je toestellen worden bewaard.</strong> Dit overzicht gebruikt de SQLite-database op de server. Toegevoegde toestellen blijven ook na herladen beschikbaar.</p>
     </div>
 
     <section class="summary" aria-label="Samenvatting">
@@ -98,7 +98,7 @@
         </div>
         <button type="button" class="icon-button" id="cancel-add" aria-label="Sluiten">×</button>
       </div>
-      <p class="form-hint">Dit toestel wordt voorlopig alleen in het geheugen van deze pagina bewaard.</p>
+      <p class="form-hint">Dit toestel wordt opgeslagen in de SQLite-database op de server.</p>
       <label class="field" for="device-name">Naam <span class="required">*</span>
         <input id="device-name" name="name" maxlength="70" required placeholder="Bijv. Mijn stadsfiets">
       </label>

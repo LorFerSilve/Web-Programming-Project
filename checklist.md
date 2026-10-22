@@ -11,7 +11,7 @@
 - [x] Frontend maken met **HTML, CSS en JavaScript** (Bootstrap mag).
 - [x] Backend maken met **Node.js en Express.js**.
 - [x] Gegevens **persistent op de server** opslaan (voorstel: SQLite).
-- [ ] Frontend en backend laten communiceren via HTTP/`fetch`.
+- [x] Frontend en backend laten communiceren via HTTP/`fetch`.
 - [ ] Een overzichtelijke interface maken voor desktop én smartphone.
 - [ ] De volledige applicatie kunnen opstarten met **Docker**.
 

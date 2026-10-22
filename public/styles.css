@@ -112,3 +112,5 @@ h2 { margin-bottom: 6px; font-size: 23px; letter-spacing: -.03em; }
   .modal { padding: 20px; }
 }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+.button:disabled { opacity: .6; cursor: wait; }
+.toast.toast-error { background: #a33333; }

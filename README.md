@@ -11,7 +11,7 @@ npm install
 npm start
 ```
 
-Open **http://localhost:3000** voor de bestaande frontend.
+Open **http://localhost:3000** voor de applicatie. De frontend haalt toestellen met `fetch` op bij Express en slaat nieuwe toestellen rechtstreeks op in SQLite. Open de HTML dus **via deze server**, niet als los bestand (`file://`).
 Controleer de backend via **http://localhost:3000/api/health** (`{"status":"ok"}`).
 
 ## Persistente opslag
@@ -34,7 +34,7 @@ Invoke-RestMethod http://localhost:3000/api/devices -Method Post -ContentType 'a
 Invoke-RestMethod http://localhost:3000/api/devices
 ```
 
-**Belangrijk:** de bestaande frontend gebruikt nog altijd zijn eigen voorbeeldtoestellen en slaat formuliergegevens alleen in het browsergeheugen op. Het koppelen van de frontend aan deze API via `fetch` is de **volgende** stap in `checklist.md`.
+**Belangrijk:** het dashboard toont nu uitsluitend toestellen uit SQLite, dus een nieuwe database heeft eerst een lege lijst. Gebruik **Toestel toevoegen** in de browser of de API om nieuwe toestellen aan te maken. Onderhoud, defecten en gebruikersbeheer volgen in latere stappen uit `checklist.md`.
 
 ## Tests
 

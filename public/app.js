@@ -1,6 +1,6 @@
 "use strict";
 
-// Voorbeeldgegevens voor deze frontendstap. In een volgende stap komen deze uit de backend.
+// De toestellen worden bij het openen van de pagina via Express uit SQLite geladen.
 function dateIn(days) {
   const date = new Date();
   date.setDate(date.getDate() + days);
@@ -8,11 +8,9 @@ function dateIn(days) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
-const devices = [
-  { id: 1, name: "Stadsfiets", type: "fiets", brand: "Gazelle", model: "Esprit", nextMaintenance: dateIn(12) },
-  { id: 2, name: "Koffiemachine", type: "apparaat", brand: "De'Longhi", model: "Magnifica", nextMaintenance: dateIn(-5) },
-  { id: 3, name: "3D-printer", type: "apparaat", brand: "Bambu Lab", model: "A1", nextMaintenance: dateIn(65) }
-];
+let devices = [];
+let loading = true;
+let loadFailed = false;
 
 const categories = { fiets: "Fiets", voertuig: "Voertuig", apparaat: "Apparaat", overig: "Overig" };
 const icons = { fiets: "F", voertuig: "V", apparaat: "A", overig: "O" };
@@ -23,6 +21,15 @@ const addDialog = document.querySelector("#add-dialog");
 const detailDialog = document.querySelector("#detail-dialog");
 const addForm = document.querySelector("#add-form");
 const message = document.querySelector("#message");
+const openAddButton = document.querySelector("#open-add");
+const saveButton = addForm.querySelector('button[type="submit"]');
+openAddButton.disabled = true;
+
+function showMessage(text, error = false) {
+  message.textContent = text;
+  message.classList.toggle("toast-error", error);
+  message.hidden = false;
+}
 
 function dateLabel(value) {
   return value ? new Intl.DateTimeFormat("nl-BE", { day: "numeric", month: "long", year: "numeric" })
@@ -73,9 +80,14 @@ function render() {
   );
 
   const cards = filtered.map(deviceCard);
-  if (!cards.length) {
+  if (loading || loadFailed || !cards.length) {
     const empty = make("div", "empty");
-    empty.append(make("strong", "", "Geen toestellen gevonden"), make("span", "", "Pas je zoekopdracht of categorie aan."));
+    const title = loading ? "Toestellen laden…" : loadFailed ? "Toestellen niet beschikbaar" :
+      devices.length ? "Geen toestellen gevonden" : "Nog geen toestellen";
+    const description = loading ? "Gegevens worden opgehaald van de server." :
+      loadFailed ? "Controleer of de server draait en vernieuw de pagina." :
+      devices.length ? "Pas je zoekopdracht of categorie aan." : "Voeg je eerste toestel toe om te beginnen.";
+    empty.append(make("strong", "", title), make("span", "", description));
     cards.push(empty);
   }
   list.replaceChildren(...cards);
@@ -108,27 +120,66 @@ document.querySelector("#close-detail-bottom").addEventListener("click", () => c
 search.addEventListener("input", render);
 typeFilter.addEventListener("change", render);
 
-addForm.addEventListener("submit", event => {
+async function loadDevices() {
+  try {
+    const response = await fetch("/api/devices");
+    if (!response.ok) throw new Error("Ophalen mislukt");
+    const data = await response.json();
+    if (!Array.isArray(data)) throw new Error("Ongeldig antwoord van de server");
+    devices = data;
+    openAddButton.disabled = false;
+  } catch (error) {
+    loadFailed = true;
+    showMessage("De toestellen konden niet worden opgehaald. Controleer de server en herlaad de pagina.", true);
+  } finally {
+    loading = false;
+    render();
+  }
+}
+
+addForm.addEventListener("submit", async event => {
   event.preventDefault();
   const values = new FormData(addForm);
-  const name = String(values.get("name") || "").trim();
-  if (!name) { document.querySelector("#device-name").focus(); return; }
-  const type = String(values.get("type"));
-  if (!Object.hasOwn(categories, type)) return;
-  devices.unshift({
-    id: Math.max(0, ...devices.map(device => device.id)) + 1,
-    name, type,
+  const device = {
+    name: String(values.get("name") || "").trim(),
+    type: String(values.get("type") || ""),
     brand: String(values.get("brand") || "").trim(),
     model: String(values.get("model") || "").trim(),
     nextMaintenance: String(values.get("nextMaintenance") || "")
-  });
-  search.value = "";
-  typeFilter.value = "all";
-  addForm.reset();
-  addDialog.close();
-  render();
-  message.textContent = `“${name}” toegevoegd voor deze browsersessie (nog niet opgeslagen).`;
-  message.hidden = false;
+  };
+  if (!device.name) {
+    document.querySelector("#device-name").focus();
+    return;
+  }
+  if (!Object.hasOwn(categories, device.type)) return;
+
+  saveButton.disabled = true;
+  try {
+    const response = await fetch("/api/devices", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(device)
+    });
+    if (!response.ok) {
+      const result = await response.json().catch(() => ({}));
+      throw new Error(result.error || "Opslaan mislukt");
+    }
+
+    // Gebruik het toestel uit de POST-response: niet opnieuw lokaal een ID genereren.
+    const saved = await response.json();
+    devices.unshift(saved);
+    search.value = "";
+    typeFilter.value = "all";
+    addForm.reset();
+    addDialog.close();
+    render();
+    showMessage(`“${saved.name}” is opgeslagen in de database.`);
+  } catch (error) {
+    showMessage(`Toestel niet opgeslagen: ${error.message}`, true);
+  } finally {
+    saveButton.disabled = false;
+  }
 });
 
 render();
+loadDevices();
