@@ -1,6 +1,6 @@
 import express from "express";
 import { fileURLToPath } from "node:url";
-import { addDevice, listDevices } from "./database.js";
+import { addDevice, deleteDevice, listDevices, updateDevice } from "./database.js";
 
 const deviceTypes = new Set(["fiets", "voertuig", "apparaat", "overig"]);
 
@@ -21,6 +21,12 @@ function parseDevice(body) {
   return { name: name.trim(), type, brand: brand.trim(), model: model.trim(), nextMaintenance };
 }
 
+function parseId(value) {
+  if (!/^\d+$/.test(value)) return null;
+  const id = Number(value);
+  return Number.isSafeInteger(id) && id > 0 ? id : null;
+}
+
 export default function createApp(db) {
   const app = express();
   app.use(express.json({ limit: "16kb" }));
@@ -39,6 +45,25 @@ export default function createApp(db) {
       return response.status(400).json({ error: "Ongeldige toestelgegevens." });
     }
     return response.status(201).json(addDevice(db, device));
+  });
+
+  app.put("/api/devices/:id", (request, response) => {
+    const id = parseId(request.params.id);
+    if (id === null) return response.status(400).json({ error: "Ongeldig toestel-ID." });
+    const device = parseDevice(request.body);
+    if (!device) return response.status(400).json({ error: "Ongeldige toestelgegevens." });
+    const updated = updateDevice(db, id, device);
+    if (!updated) return response.status(404).json({ error: "Toestel niet gevonden." });
+    return response.json(updated);
+  });
+
+  app.delete("/api/devices/:id", (request, response) => {
+    const id = parseId(request.params.id);
+    if (id === null) return response.status(400).json({ error: "Ongeldig toestel-ID." });
+    if (!deleteDevice(db, id)) {
+      return response.status(404).json({ error: "Toestel niet gevonden." });
+    }
+    return response.sendStatus(204);
   });
 
   app.use(express.static(fileURLToPath(new URL("../public/", import.meta.url))));

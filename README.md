@@ -75,6 +75,8 @@ De eenvoudige toestellen-API is alvast beschikbaar:
 
 - `GET /api/devices` geeft de opgeslagen toestellen als JSON terug.
 - `POST /api/devices` voegt een toestel toe met JSON-velden `name`, `type`, optioneel `brand`, `model` en `nextMaintenance` (YYYY-MM-DD).
+- `PUT /api/devices/:id` past de gegevens van een bestaand toestel aan (volledig JSON-object).
+- `DELETE /api/devices/:id` verwijdert een toestel na bevestiging in de frontend (HTTP 204).
 
 Voorbeeld in PowerShell (terwijl `npm start` draait):
 
@@ -83,7 +85,7 @@ Invoke-RestMethod http://localhost:3000/api/devices -Method Post -ContentType 'a
 Invoke-RestMethod http://localhost:3000/api/devices
 ```
 
-**Belangrijk:** het dashboard toont nu uitsluitend toestellen uit SQLite, dus een nieuwe database heeft eerst een lege lijst. Gebruik **Toestel toevoegen** in de browser of de API om nieuwe toestellen aan te maken. Onderhoud, defecten en gebruikersbeheer volgen in latere stappen uit `checklist.md`.
+**Belangrijk:** het dashboard toont nu uitsluitend toestellen uit SQLite, dus een nieuwe database heeft eerst een lege lijst. Gebruik **Toestel toevoegen** in de browser of de API om nieuwe toestellen aan te maken. Via **Bekijk details** kun je een toestel bewerken of na bevestiging verwijderen. Alle wijzigingen worden in SQLite bewaard. Onderhoud, defecten en gebruikersbeheer volgen in latere stappen uit `checklist.md`.
 
 ## Tests
 

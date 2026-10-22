@@ -42,3 +42,21 @@ export function addDevice(db, device) {
     FROM devices WHERE id = ?
   `).get(result.lastInsertRowid);
 }
+
+export function updateDevice(db, id, device) {
+  const result = db.prepare(`
+    UPDATE devices
+    SET name = ?, type = ?, brand = ?, model = ?, next_maintenance = ?
+    WHERE id = ?
+  `).run(device.name, device.type, device.brand, device.model, device.nextMaintenance, id);
+
+  if (result.changes === 0) return null;
+  return db.prepare(`
+    SELECT id, name, type, brand, model, next_maintenance AS nextMaintenance
+    FROM devices WHERE id = ?
+  `).get(id);
+}
+
+export function deleteDevice(db, id) {
+  return db.prepare("DELETE FROM devices WHERE id = ?").run(id).changes > 0;
+}

@@ -133,3 +133,13 @@ h2 { margin-bottom: 6px; font-size: 23px; letter-spacing: -.03em; }
 @media (max-width: 360px) {
   .modal-heading h2 { font-size: 20px; }
 }
+
+/* CRUD-bediening in de bestaande modals. */
+.button-danger { background: #fff; color: #ab3636; border-color: #e8b9b9; }
+.button-danger:hover { background: #fff1f1; }
+.form-error { margin: 0; color: #a02c2c; font-size: 13px; font-weight: 600; }
+.detail-actions { flex-wrap: wrap; }
+.detail-actions .button-danger { margin-right: auto; }
+@media (max-width: 480px) {
+  .detail-actions .button { flex: 1 1 auto; }
+}

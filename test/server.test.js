@@ -84,3 +84,66 @@ test("Unknown routes return HTTP 404", async () => {
   const response = await request("/does-not-exist");
   assert.equal(response.status, 404);
 });
+
+
+test("PUT en DELETE passen de toestelgegevens via de API aan", async () => {
+  const db = openDatabase(":memory:");
+  const server = createApp(db).listen(0, "127.0.0.1");
+  try {
+    await once(server, "listening");
+    const base = `http://127.0.0.1:${server.address().port}`;
+    const headers = { "Content-Type": "application/json" };
+    const create = await fetch(`${base}/api/devices`, {
+      method: "POST", headers,
+      body: JSON.stringify({ name: "Fiets", type: "fiets" })
+    });
+    const device = await create.json();
+
+    const update = await fetch(`${base}/api/devices/${device.id}`, {
+      method: "PUT", headers,
+      body: JSON.stringify({
+        name: "Racefiets", type: "fiets", brand: "Trek",
+        model: "Domane", nextMaintenance: "2026-12-05"
+      })
+    });
+    assert.equal(update.status, 200);
+    const updated = await update.json();
+    assert.equal(updated.id, device.id);
+    assert.equal(updated.name, "Racefiets");
+    assert.deepEqual(await (await fetch(`${base}/api/devices`)).json(), [updated]);
+
+    const deleted = await fetch(`${base}/api/devices/${device.id}`, { method: "DELETE" });
+    assert.equal(deleted.status, 204);
+    assert.equal(deleted.headers.get("content-length"), null);
+    assert.deepEqual(await (await fetch(`${base}/api/devices`)).json(), []);
+    assert.equal((await fetch(`${base}/api/devices/${device.id}`, { method: "DELETE" })).status, 404);
+  } finally {
+    await new Promise(resolve => server.close(resolve));
+    db.close();
+  }
+});
+
+test("PUT en DELETE controleren toestel-ID en invoer", async () => {
+  const db = openDatabase(":memory:");
+  const server = createApp(db).listen(0, "127.0.0.1");
+  try {
+    await once(server, "listening");
+    const base = `http://127.0.0.1:${server.address().port}`;
+    const headers = { "Content-Type": "application/json" };
+    const validDevice = { name: "Fiets", type: "fiets" };
+    const invalidId = await fetch(`${base}/api/devices/abc`, {
+      method: "PUT", headers, body: JSON.stringify(validDevice)
+    });
+    assert.equal(invalidId.status, 400);
+    assert.equal((await fetch(`${base}/api/devices/0`, { method: "DELETE" })).status, 400);
+    assert.equal((await fetch(`${base}/api/devices/999`, {
+      method: "PUT", headers, body: JSON.stringify(validDevice)
+    })).status, 404);
+    assert.equal((await fetch(`${base}/api/devices/1`, {
+      method: "PUT", headers, body: JSON.stringify({ name: "", type: "fiets" })
+    })).status, 400);
+  } finally {
+    await new Promise(resolve => server.close(resolve));
+    db.close();
+  }
+});

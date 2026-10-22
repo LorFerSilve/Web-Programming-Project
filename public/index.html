@@ -98,7 +98,7 @@
         </div>
         <button type="button" class="icon-button" id="cancel-add" aria-label="Sluiten">×</button>
       </div>
-      <p class="form-hint">Dit toestel wordt opgeslagen in de SQLite-database op de server.</p>
+      <p id="form-hint" class="form-hint">Dit toestel wordt opgeslagen in de SQLite-database op de server.</p>
       <label class="field" for="device-name">Naam <span class="required">*</span>
         <input id="device-name" name="name" maxlength="70" required placeholder="Bijv. Mijn stadsfiets">
       </label>
@@ -121,6 +121,7 @@
       <label class="field" for="device-maintenance">Volgende onderhoudsdatum
         <input id="device-maintenance" name="nextMaintenance" type="date">
       </label>
+      <p id="form-error" class="form-error" role="alert" hidden></p>
       <div class="modal-actions">
         <button type="button" id="cancel-add-bottom" class="button button-secondary">Annuleren</button>
         <button type="submit" class="button button-primary">Toevoegen</button>
@@ -138,7 +139,12 @@
     </div>
     <dl id="detail-content" class="details"></dl>
     <p class="form-hint">Onderhoudshistoriek, defecten en herstellingen worden in volgende stappen toegevoegd.</p>
-    <div class="modal-actions"><button id="close-detail-bottom" type="button" class="button button-secondary">Sluiten</button></div>
+    <p id="detail-error" class="form-error" role="alert" hidden></p>
+    <div class="modal-actions detail-actions">
+      <button id="delete-device" type="button" class="button button-danger">Verwijderen</button>
+      <button id="edit-device" type="button" class="button button-secondary">Bewerken</button>
+      <button id="close-detail-bottom" type="button" class="button button-secondary">Sluiten</button>
+    </div>
   </dialog>
   <p class="toast" id="message" role="status" hidden></p>
 </body>

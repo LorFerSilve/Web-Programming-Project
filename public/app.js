@@ -11,6 +11,8 @@ function dateIn(days) {
 let devices = [];
 let loading = true;
 let loadFailed = false;
+let editingId = null;
+let selectedDeviceId = null;
 
 const categories = { fiets: "Fiets", voertuig: "Voertuig", apparaat: "Apparaat", overig: "Overig" };
 const icons = { fiets: "F", voertuig: "V", apparaat: "A", overig: "O" };
@@ -23,6 +25,10 @@ const addForm = document.querySelector("#add-form");
 const message = document.querySelector("#message");
 const openAddButton = document.querySelector("#open-add");
 const saveButton = addForm.querySelector('button[type="submit"]');
+const formError = document.querySelector("#form-error");
+const detailError = document.querySelector("#detail-error");
+const editButton = document.querySelector("#edit-device");
+const deleteButton = document.querySelector("#delete-device");
 openAddButton.disabled = true;
 
 function showMessage(text, error = false) {
@@ -107,12 +113,65 @@ function showDetails(device) {
   ]) {
     details.append(make("dt", "", label), make("dd", "", value));
   }
+  selectedDeviceId = device.id;
+  detailError.hidden = true;
   detailDialog.showModal();
 }
 
 function closeDialog(dialog) { dialog.close(); }
 
-document.querySelector("#open-add").addEventListener("click", () => addDialog.showModal());
+function openDeviceForm(device = null) {
+  editingId = device ? device.id : null;
+  addForm.reset();
+  formError.hidden = true;
+  document.querySelector("#add-title").textContent = device ? "Toestel bewerken" : "Toestel toevoegen";
+  document.querySelector("#form-hint").textContent = device ?
+    "Wijzigingen worden opgeslagen in de SQLite-database." :
+    "Dit toestel wordt opgeslagen in de SQLite-database op de server.";
+  saveButton.textContent = device ? "Opslaan" : "Toevoegen";
+
+  if (device) {
+    for (const key of ["name", "type", "brand", "model", "nextMaintenance"]) {
+      addForm.elements.namedItem(key).value = device[key] || "";
+    }
+  }
+  addDialog.showModal();
+}
+
+document.querySelector("#open-add").addEventListener("click", () => openDeviceForm());
+editButton.addEventListener("click", () => {
+  const device = devices.find(item => item.id === selectedDeviceId);
+  if (!device) return;
+  detailDialog.close();
+  openDeviceForm(device);
+});
+
+deleteButton.addEventListener("click", async () => {
+  const device = devices.find(item => item.id === selectedDeviceId);
+  if (!device || !window.confirm(`Weet je zeker dat je “${device.name}” wilt verwijderen?`)) return;
+
+  editButton.disabled = true;
+  deleteButton.disabled = true;
+  detailError.hidden = true;
+  try {
+    const response = await fetch(`/api/devices/${device.id}`, { method: "DELETE" });
+    if (!response.ok) {
+      const result = await response.json().catch(() => ({}));
+      throw new Error(result.error || "Verwijderen mislukt");
+    }
+    devices = devices.filter(item => item.id !== device.id);
+    detailDialog.close();
+    selectedDeviceId = null;
+    render();
+    showMessage(`“${device.name}” is verwijderd.`);
+  } catch (error) {
+    detailError.textContent = `Toestel niet verwijderd: ${error.message}`;
+    detailError.hidden = false;
+  } finally {
+    editButton.disabled = false;
+    deleteButton.disabled = false;
+  }
+});
 document.querySelector("#cancel-add").addEventListener("click", () => closeDialog(addDialog));
 document.querySelector("#cancel-add-bottom").addEventListener("click", () => closeDialog(addDialog));
 document.querySelector("#close-detail").addEventListener("click", () => closeDialog(detailDialog));
@@ -139,6 +198,7 @@ async function loadDevices() {
 
 addForm.addEventListener("submit", async event => {
   event.preventDefault();
+  if (saveButton.disabled) return;
   const values = new FormData(addForm);
   const device = {
     name: String(values.get("name") || "").trim(),
@@ -153,10 +213,14 @@ addForm.addEventListener("submit", async event => {
   }
   if (!Object.hasOwn(categories, device.type)) return;
 
+  const isEditing = editingId !== null;
+  const url = isEditing ? `/api/devices/${editingId}` : "/api/devices";
+  formError.hidden = true;
   saveButton.disabled = true;
+
   try {
-    const response = await fetch("/api/devices", {
-      method: "POST",
+    const response = await fetch(url, {
+      method: isEditing ? "PUT" : "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(device)
     });
@@ -164,18 +228,23 @@ addForm.addEventListener("submit", async event => {
       const result = await response.json().catch(() => ({}));
       throw new Error(result.error || "Opslaan mislukt");
     }
-
-    // Gebruik het toestel uit de POST-response: niet opnieuw lokaal een ID genereren.
     const saved = await response.json();
-    devices.unshift(saved);
+    if (isEditing) {
+      const index = devices.findIndex(item => item.id === editingId);
+      if (index !== -1) devices[index] = saved;
+    } else {
+      devices.unshift(saved);
+    }
     search.value = "";
     typeFilter.value = "all";
     addForm.reset();
     addDialog.close();
+    editingId = null;
     render();
-    showMessage(`“${saved.name}” is opgeslagen in de database.`);
+    showMessage(`“${saved.name}” is ${isEditing ? "bijgewerkt" : "toegevoegd"} in de database.`);
   } catch (error) {
-    showMessage(`Toestel niet opgeslagen: ${error.message}`, true);
+    formError.textContent = `Toestel niet opgeslagen: ${error.message}`;
+    formError.hidden = false;
   } finally {
     saveButton.disabled = false;
   }

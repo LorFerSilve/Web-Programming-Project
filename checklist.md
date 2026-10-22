@@ -19,7 +19,7 @@
 
 ## 2. Toestellen en gebruikers
 
-- [ ] Een gebruiker kan toestellen toevoegen, bekijken, aanpassen en verwijderen.
+- [x] Een gebruiker kan toestellen toevoegen, bekijken, aanpassen en verwijderen.
 - [ ] Een gebruiker kan **meerdere toestellen** beheren.
 - [ ] Per toestel basisgegevens opslaan, bijvoorbeeld naam, type, merk, model en aankoopdatum.
 - [ ] Per toestel een eigen detailpagina tonen met alle gekoppelde informatie.
