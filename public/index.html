@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f8fa">
+  <title>Onderhoudslogboek | Mijn toestellen</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Ga naar inhoud</a>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="#dashboard" aria-label="Onderhoudslogboek - overzicht">
+        <span class="brand-icon" aria-hidden="true">↻</span>
+        <span>Onderhoudslogboek</span>
+      </a>
+      <nav class="main-nav" aria-label="Hoofdnavigatie">
+        <a href="#dashboard">Overzicht</a>
+        <a href="#devices">Toestellen</a>
+      </nav>
+      <span class="mode-label">Frontend-demo</span>
+    </div>
+  </header>
+
+  <main id="main" class="container">
+    <section class="intro" id="dashboard" aria-labelledby="page-title">
+      <div>
+        <p class="eyebrow">Jouw persoonlijke werkplaats</p>
+        <h1 id="page-title">Alles over je toestellen, op één plek.</h1>
+        <p class="intro-text">Houd je apparaten in het oog en zie wanneer het volgende onderhoud gepland is.</p>
+      </div>
+      <button class="button button-primary" id="open-add" type="button">+ Toestel toevoegen</button>
+    </section>
+
+    <div class="demo-notice" role="note">
+      <span aria-hidden="true">ⓘ</span>
+      <p><strong>Dit is een frontend-demo.</strong> De getoonde toestellen zijn voorbeelden. Nieuwe toestellen blijven alleen zichtbaar zolang deze pagina open is; serveropslag volgt later.</p>
+    </div>
+
+    <section class="summary" aria-label="Samenvatting">
+      <div class="summary-card">
+        <span class="summary-label">Mijn toestellen</span>
+        <strong id="count-devices" class="summary-value">0</strong>
+        <span class="summary-caption">Geregistreerde toestellen</span>
+      </div>
+      <div class="summary-card">
+        <span class="summary-label">Onderhoud gepland</span>
+        <strong id="count-planned" class="summary-value">0</strong>
+        <span class="summary-caption">Toekomstige onderhoudsdatums</span>
+      </div>
+      <div class="summary-card">
+        <span class="summary-label">Achterstallig</span>
+        <strong id="count-overdue" class="summary-value">0</strong>
+        <span class="summary-caption">Onderhoudsdatums verstreken</span>
+      </div>
+    </section>
+
+    <section class="devices-section" id="devices" aria-labelledby="devices-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Inventaris</p>
+          <h2 id="devices-title">Mijn toestellen</h2>
+          <p class="section-subtitle">Bekijk je toestellen en hun volgende onderhoudsmoment.</p>
+        </div>
+        <span id="result-count" class="result-count"></span>
+      </div>
+      <div class="filters">
+        <label class="field search-field" for="search">
+          <span>Zoeken</span>
+          <input id="search" type="search" placeholder="Zoek op naam, merk of model…" autocomplete="off">
+        </label>
+        <label class="field type-field" for="type-filter">
+          <span>Categorie</span>
+          <select id="type-filter">
+            <option value="all">Alle categorieën</option>
+            <option value="fiets">Fiets</option>
+            <option value="voertuig">Voertuig</option>
+            <option value="apparaat">Apparaat</option>
+            <option value="overig">Overig</option>
+          </select>
+        </label>
+      </div>
+      <div id="device-list" class="device-grid" aria-live="polite"></div>
+      <noscript>Schakel JavaScript in om de toestellen weer te geven.</noscript>
+    </section>
+  </main>
+
+  <footer class="container footer">Web Programming · Project 2026–2027</footer>
+
+  <dialog id="add-dialog" class="modal" aria-labelledby="add-title">
+    <form id="add-form">
+      <div class="modal-heading">
+        <div>
+          <p class="eyebrow">Nieuw toestel</p>
+          <h2 id="add-title">Toestel toevoegen</h2>
+        </div>
+        <button type="button" class="icon-button" id="cancel-add" aria-label="Sluiten">×</button>
+      </div>
+      <p class="form-hint">Dit toestel wordt voorlopig alleen in het geheugen van deze pagina bewaard.</p>
+      <label class="field" for="device-name">Naam <span class="required">*</span>
+        <input id="device-name" name="name" maxlength="70" required placeholder="Bijv. Mijn stadsfiets">
+      </label>
+      <label class="field" for="device-type">Categorie <span class="required">*</span>
+        <select id="device-type" name="type" required>
+          <option value="fiets">Fiets</option>
+          <option value="voertuig">Voertuig</option>
+          <option value="apparaat">Apparaat</option>
+          <option value="overig">Overig</option>
+        </select>
+      </label>
+      <div class="form-row">
+        <label class="field" for="device-brand">Merk
+          <input id="device-brand" name="brand" maxlength="70" placeholder="Optioneel">
+        </label>
+        <label class="field" for="device-model">Model
+          <input id="device-model" name="model" maxlength="70" placeholder="Optioneel">
+        </label>
+      </div>
+      <label class="field" for="device-maintenance">Volgende onderhoudsdatum
+        <input id="device-maintenance" name="nextMaintenance" type="date">
+      </label>
+      <div class="modal-actions">
+        <button type="button" id="cancel-add-bottom" class="button button-secondary">Annuleren</button>
+        <button type="submit" class="button button-primary">Toevoegen</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="detail-dialog" class="modal" aria-labelledby="detail-title">
+    <div class="modal-heading">
+      <div>
+        <p class="eyebrow">Toesteldetails</p>
+        <h2 id="detail-title">Toestel</h2>
+      </div>
+      <button type="button" class="icon-button" id="close-detail" aria-label="Sluiten">×</button>
+    </div>
+    <dl id="detail-content" class="details"></dl>
+    <p class="form-hint">Onderhoudshistoriek, defecten en herstellingen worden in volgende stappen toegevoegd.</p>
+    <div class="modal-actions"><button id="close-detail-bottom" type="button" class="button button-secondary">Sluiten</button></div>
+  </dialog>
+  <p class="toast" id="message" role="status" hidden></p>
+</body>
+</html>
