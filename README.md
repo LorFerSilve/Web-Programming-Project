@@ -116,3 +116,16 @@ Je kunt dit zelf controleren met de **Device Toolbar** in de browser
 (`F12` → `Ctrl+Shift+M`) op bijvoorbeeld 320, 390, 768 en 1440 pixels.
 De mobiele interface voor het **registreren van onderhoudsacties en foto's**
 komt later, bij de bijbehorende requirements.
+
+## Toesteldetailpagina
+
+Elk toestel heeft een eigen, rechtstreeks te openen adres: `/devices/<id>`.
+Klik op **Bekijk details** in het overzicht om erheen te gaan. De pagina
+haalt het toestel afzonderlijk op via `GET /api/devices/:id` en toont
+categorie, merk, model, aankoopdatum en onderhoudsdatum. Bewerken en
+verwijderen blijft op de detailpagina mogelijk en gebruikt dezelfde SQLite-API.
+Een niet-bestaand toestel levert een HTTP 404 op.
+
+De onderdelen **onderhoudshistoriek** en **foto's/documenten/links** hebben al
+een duidelijke plaats op de pagina; de daadwerkelijke registraties en bijlagen
+volgen in de latere checklistonderdelen. Er worden nog geen fictieve gegevens getoond.

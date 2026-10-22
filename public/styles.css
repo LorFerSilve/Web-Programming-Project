@@ -68,6 +68,7 @@ h2 { margin-bottom: 6px; font-size: 23px; letter-spacing: -.03em; }
 .maintenance-line { color: #526275; font-size: 13px; margin: auto 0 0; }
 .card-footer { padding-top: 14px; border-top: 1px solid #edf0f4; }
 .detail-button { color: #137452; border: 0; padding: 0; background: none; font-weight: 750; font-size: 13px; }
+.detail-button { text-decoration: none; }
 .detail-button:hover { text-decoration: underline; }
 .empty { grid-column: 1 / -1; padding: 46px 24px; text-align: center; border: 1px dashed #cad4df; border-radius: 13px; background: white; color: #637185; }
 .empty strong { display: block; margin-bottom: 5px; color: #26364a; }
@@ -142,4 +143,32 @@ h2 { margin-bottom: 6px; font-size: 23px; letter-spacing: -.03em; }
 .detail-actions .button-danger { margin-right: auto; }
 @media (max-width: 480px) {
   .detail-actions .button { flex: 1 1 auto; }
+}
+
+/* Eigen toestelpagina */
+.detail-page { padding-top: 34px; }
+.back-link { display: inline-flex; align-items: center; min-height: 44px; margin-bottom: 14px; color: #176f54; text-decoration: none; font-size: 14px; font-weight: 700; }
+.back-link:hover { text-decoration: underline; }
+.detail-notice { padding: 20px; background: #fff; border: 1px solid #e4e9ef; border-radius: 12px; color: #526275; }
+.device-hero { display: flex; justify-content: space-between; align-items: center; gap: 24px; margin-bottom: 28px; }
+.device-hero h1 { margin-bottom: 9px; overflow-wrap: anywhere; }
+.device-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.device-detail-grid { display: grid; grid-template-columns: 1.35fr 1fr; gap: 18px; }
+.detail-panel { background: #fff; border: 1px solid #e4e9ef; border-radius: 15px; padding: 26px; min-width: 0; box-shadow: 0 4px 16px #17233805; }
+.detail-panel h2 { margin-bottom: 22px; }
+.detail-panel .details { margin: 0; }
+.detail-panel .status { display: inline-flex; }
+.detail-space-top { margin-top: 22px; }
+.detail-date { margin: 5px 0 17px; font-size: 20px; font-weight: 750; overflow-wrap: anywhere; }
+.secondary-panels { margin-top: 18px; }
+.secondary-panels h2 { margin-bottom: 11px; }
+@media (max-width: 700px) {
+  .device-hero { flex-direction: column; align-items: stretch; gap: 18px; }
+  .device-detail-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 480px) {
+  .detail-page { padding-top: 18px; }
+  .device-actions .button { flex: 1; }
+  .detail-panel { padding: 20px; }
+  .detail-panel .details { grid-template-columns: minmax(110px, 1fr) 1.2fr; }
 }

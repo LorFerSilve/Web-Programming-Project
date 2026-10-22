@@ -67,3 +67,11 @@ export function updateDevice(db, id, device) {
 export function deleteDevice(db, id) {
   return db.prepare("DELETE FROM devices WHERE id = ?").run(id).changes > 0;
 }
+
+export function getDevice(db, id) {
+  return db.prepare(`
+    SELECT id, name, type, brand, model,
+           next_maintenance AS nextMaintenance, purchase_date AS purchaseDate
+    FROM devices WHERE id = ?
+  `).get(id) ?? null;
+}

@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { DatabaseSync } from "node:sqlite";
 import path from "node:path";
 import test from "node:test";
-import { addDevice, deleteDevice, listDevices, openDatabase, updateDevice } from "../src/database.js";
+import { addDevice, deleteDevice, getDevice, listDevices, openDatabase, updateDevice } from "../src/database.js";
 
 test("SQLite bewaart toestellen na sluiten en opnieuw openen", () => {
   const directory = mkdtempSync(path.join(tmpdir(), "maintenance-db-"));
@@ -139,5 +139,22 @@ test("Bestaande SQLite-database krijgt aankoopdatumkolom zonder gegevensverlies"
     reopened.close();
   } finally {
     rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("Een toestel afzonderlijk ophalen geeft de juiste gegevens terug", () => {
+  const db = openDatabase(":memory:");
+  try {
+    const first = addDevice(db, { name: "Fiets", type: "fiets", brand: "Gazelle",
+      model: "Esprit", purchaseDate: "2025-03-10", nextMaintenance: "" });
+    const second = addDevice(db, { name: "Printer", type: "apparaat", brand: "",
+      model: "", purchaseDate: "", nextMaintenance: "" });
+    assert.deepEqual(getDevice(db, first.id), first);
+    assert.deepEqual(getDevice(db, second.id), second);
+    assert.equal(getDevice(db, 999999), null);
+    deleteDevice(db, first.id);
+    assert.equal(getDevice(db, first.id), null);
+  } finally {
+    db.close();
   }
 });

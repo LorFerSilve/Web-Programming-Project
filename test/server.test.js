@@ -182,3 +182,53 @@ test("Aankoopdatum wordt via POST en PUT bewaard en gevalideerd", async () => {
     db.close();
   }
 });
+
+test("GET /api/devices/:id haalt precies één toestel op", async () => {
+  const db = openDatabase(":memory:");
+  const server = createApp(db).listen(0, "127.0.0.1");
+  try {
+    await once(server, "listening");
+    const base = `http://127.0.0.1:${server.address().port}`;
+    const first = await fetch(`${base}/api/devices`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: "Fiets", type: "fiets", purchaseDate: "2025-03-10" })
+    });
+    const device = await first.json();
+    const response = await fetch(`${base}/api/devices/${device.id}`);
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), device);
+    assert.equal((await fetch(`${base}/api/devices/999999`)).status, 404);
+    assert.equal((await fetch(`${base}/api/devices/abc`)).status, 400);
+  } finally {
+    await new Promise(resolve => server.close(resolve));
+    db.close();
+  }
+});
+
+test("Eigen toestelpagina werkt als rechtstreekse link", async () => {
+  const db = openDatabase(":memory:");
+  const server = createApp(db).listen(0, "127.0.0.1");
+  try {
+    await once(server, "listening");
+    const base = `http://127.0.0.1:${server.address().port}`;
+    const created = await fetch(`${base}/api/devices`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: "Koffiemachine", type: "apparaat" })
+    });
+    const device = await created.json();
+    const page = await fetch(`${base}/devices/${device.id}`);
+    assert.equal(page.status, 200);
+    assert.match(page.headers.get("content-type"), /text\/html/);
+    assert.match(await page.text(), /id="device-fields"/);
+    const script = await fetch(`${base}/device.js`);
+    assert.equal(script.status, 200);
+    assert.match(await script.text(), /api\/devices/);
+    assert.equal((await fetch(`${base}/devices/999999`)).status, 404);
+    assert.equal((await fetch(`${base}/devices/nope`)).status, 404);
+  } finally {
+    await new Promise(resolve => server.close(resolve));
+    db.close();
+  }
+});

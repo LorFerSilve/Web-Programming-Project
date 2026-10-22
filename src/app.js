@@ -1,6 +1,6 @@
 import express from "express";
 import { fileURLToPath } from "node:url";
-import { addDevice, deleteDevice, listDevices, updateDevice } from "./database.js";
+import { addDevice, deleteDevice, getDevice, listDevices, updateDevice } from "./database.js";
 
 const deviceTypes = new Set(["fiets", "voertuig", "apparaat", "overig"]);
 
@@ -40,6 +40,14 @@ export default function createApp(db) {
     response.json(listDevices(db));
   });
 
+  app.get("/api/devices/:id", (request, response) => {
+    const id = parseId(request.params.id);
+    if (id === null) return response.status(400).json({ error: "Ongeldig toestel-ID." });
+    const device = getDevice(db, id);
+    if (!device) return response.status(404).json({ error: "Toestel niet gevonden." });
+    return response.json(device);
+  });
+
   app.post("/api/devices", (request, response) => {
     const device = parseDevice(request.body);
     if (!device) {
@@ -65,6 +73,15 @@ export default function createApp(db) {
       return response.status(404).json({ error: "Toestel niet gevonden." });
     }
     return response.sendStatus(204);
+  });
+
+  // Een echte pagina per toestel, ook bereikbaar via een rechtstreekse URL.
+  app.get("/devices/:id", (request, response) => {
+    const id = parseId(request.params.id);
+    if (id === null || !getDevice(db, id)) {
+      return response.status(404).send("Toestel niet gevonden.");
+    }
+    return response.sendFile(fileURLToPath(new URL("../public/device.html", import.meta.url)));
   });
 
   app.use(express.static(fileURLToPath(new URL("../public/", import.meta.url))));

@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f8fa">
+  <title>Toesteldetails | Onderhoudslogboek</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/device.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Ga naar inhoud</a>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="/" aria-label="Onderhoudslogboek - overzicht">
+        <span class="brand-icon" aria-hidden="true">↻</span>
+        <span>Onderhoudslogboek</span>
+      </a>
+      <nav class="main-nav" aria-label="Hoofdnavigatie">
+        <a href="/">Overzicht</a>
+        <a href="/#devices">Toestellen</a>
+      </nav>
+      <span class="mode-label">SQLite-opslag</span>
+    </div>
+  </header>
+
+  <main id="main" class="container detail-page">
+    <a class="back-link" href="/#devices">← Terug naar mijn toestellen</a>
+    <p id="page-message" class="detail-notice" role="status">Toestel laden…</p>
+
+    <div id="device-content" hidden>
+      <section class="device-hero" aria-labelledby="device-title">
+        <div>
+          <p class="eyebrow">Toesteloverzicht</p>
+          <h1 id="device-title"></h1>
+          <p id="device-subtitle" class="intro-text"></p>
+        </div>
+        <div class="device-actions">
+          <button id="edit-device" type="button" class="button button-secondary">Bewerken</button>
+          <button id="delete-device" type="button" class="button button-danger">Verwijderen</button>
+        </div>
+      </section>
+
+      <div class="device-detail-grid">
+        <section class="detail-panel" aria-labelledby="info-title">
+          <h2 id="info-title">Toestelgegevens</h2>
+          <dl id="device-fields" class="details"></dl>
+        </section>
+
+        <section class="detail-panel" aria-labelledby="planning-title">
+          <h2 id="planning-title">Onderhoudsplanning</h2>
+          <p id="maintenance-status" class="status unplanned"></p>
+          <p class="section-subtitle detail-space-top">Volgende onderhoudsdatum</p>
+          <p id="maintenance-date" class="detail-date"></p>
+          <p class="section-subtitle">Onderhoudsregistraties en herinneringen worden in de volgende onderdelen toegevoegd.</p>
+        </section>
+      </div>
+
+      <div class="device-detail-grid secondary-panels">
+        <section class="detail-panel" aria-labelledby="history-title">
+          <h2 id="history-title">Onderhoudshistoriek</h2>
+          <p class="section-subtitle">Nog geen onderhoudsacties, defecten of herstellingen geregistreerd. Deze functionaliteit volgt in onderdeel 3.</p>
+        </section>
+        <section class="detail-panel" aria-labelledby="files-title">
+          <h2 id="files-title">Foto's, documenten en links</h2>
+          <p class="section-subtitle">Bijlagen en externe informatie kun je in een volgende ontwikkelstap aan dit toestel koppelen.</p>
+        </section>
+      </div>
+    </div>
+  </main>
+  <footer class="container footer">Web Programming · Project 2026–2027</footer>
+
+  <dialog id="edit-dialog" class="modal" aria-labelledby="edit-title">
+    <form id="edit-form">
+      <div class="modal-heading">
+        <div>
+          <p class="eyebrow">Toestel bewerken</p>
+          <h2 id="edit-title">Gegevens aanpassen</h2>
+        </div>
+        <button type="button" class="icon-button" id="cancel-edit" aria-label="Sluiten">×</button>
+      </div>
+      <p class="form-hint">Wijzigingen worden permanent opgeslagen in SQLite.</p>
+      <label class="field" for="device-name">Naam <span class="required">*</span>
+        <input id="device-name" name="name" maxlength="70" required>
+      </label>
+      <label class="field" for="device-type">Categorie <span class="required">*</span>
+        <select id="device-type" name="type" required>
+          <option value="fiets">Fiets</option>
+          <option value="voertuig">Voertuig</option>
+          <option value="apparaat">Apparaat</option>
+          <option value="overig">Overig</option>
+        </select>
+      </label>
+      <div class="form-row">
+        <label class="field" for="device-brand">Merk
+          <input id="device-brand" name="brand" maxlength="70">
+        </label>
+        <label class="field" for="device-model">Model
+          <input id="device-model" name="model" maxlength="70">
+        </label>
+      </div>
+      <label class="field" for="device-purchase">Aankoopdatum
+        <input id="device-purchase" name="purchaseDate" type="date">
+      </label>
+      <label class="field" for="device-maintenance">Volgende onderhoudsdatum
+        <input id="device-maintenance" name="nextMaintenance" type="date">
+      </label>
+      <p id="form-error" class="form-error" role="alert" hidden></p>
+      <div class="modal-actions">
+        <button type="button" id="cancel-edit-bottom" class="button button-secondary">Annuleren</button>
+        <button type="submit" class="button button-primary">Wijzigingen opslaan</button>
+      </div>
+    </form>
+  </dialog>
+  <p class="toast" id="message" role="status" hidden></p>
+</body>
+</html>
