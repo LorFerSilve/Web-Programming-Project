@@ -1,23 +1,38 @@
-# Onderhoudslogboek — frontend
+# Onderhoudslogboek
 
-Eerste stap van het project **Web Programming 2026–2027**, optie 1.
+Web Programming 2026–2027 — optie 1: digitaal onderhouds- en reparatielogboek.
 
-## Bekijken
+## Lokaal starten
 
-Open `public/index.html` in je browser. Er zijn **geen dependencies** of installatiecommando's nodig voor deze frontend-demo.
+Je hebt **Node.js 20 of nieuwer** en npm nodig.
 
-## Wat werkt al?
+```bash
+npm install
+npm start
+```
 
-- Responsive overzicht met drie voorbeeldtoestellen en onderhoudsstatussen.
-- Zoeken en filteren op categorie.
-- Toesteldetails bekijken.
-- Toestellen toevoegen tijdens de huidige browsersessie.
+Open daarna **http://localhost:3000** in je browser. Express serveert de bestaande frontend uit `public/`.
 
-**Belangrijk:** de gegevens staan op dit moment uitsluitend in JavaScript-geheugen. Ze verdwijnen bij het herladen van de pagina. Dit is bewust een frontend-demo, **geen** afgewerkte toepassing. De volgende stappen zijn Express, SQLite en frontend/backend-communicatie, daarna de overige eisen uit `checklist.md`.
+De backend controleren kan via **http://localhost:3000/api/health**. Die route geeft `{"status":"ok"}` terug.
 
-## Bestanden
+Tests uitvoeren:
 
-- `public/index.html`: semantische HTML en formulieren.
-- `public/styles.css`: vormgeving en responsive layout.
-- `public/app.js`: voorbeeldgegevens en interactie.
-- `checklist.md`: volledige projectplanning.
+```bash
+npm test
+```
+
+## Huidige functionaliteit
+
+- Responsive HTML/CSS/JavaScript-frontend met voorbeeldtoestellen, zoeken, filteren en een toevoegformulier.
+- Node.js/Express-server die de frontendbestanden aanbiedt.
+- `GET /api/health` als eenvoudige JSON-test van de backend.
+
+**Nog niet geïmplementeerd:** database, server-side opslag van toestellen en communicatie via `fetch` tussen frontend en backend. Het toevoegformulier slaat gegevens voorlopig alleen in het browsergeheugen op. Dit zijn afzonderlijke vervolgstappen in `checklist.md`.
+
+## Projectstructuur
+
+- `server.js`: start de HTTP-server.
+- `src/app.js`: Express-app, routes en statische bestanden.
+- `public/`: de bestaande frontend (`index.html`, `styles.css`, `app.js`).
+- `test/server.test.js`: HTTP-tests met de ingebouwde Node.js-testmodule.
+- `checklist.md`: voortgang van alle projectvereisten.

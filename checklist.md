@@ -9,7 +9,7 @@
 ## 1. Basis van de applicatie
 
 - [x] Frontend maken met **HTML, CSS en JavaScript** (Bootstrap mag).
-- [ ] Backend maken met **Node.js en Express.js**.
+- [x] Backend maken met **Node.js en Express.js**.
 - [ ] Gegevens **persistent op de server** opslaan (voorstel: SQLite).
 - [ ] Frontend en backend laten communiceren via HTTP/`fetch`.
 - [ ] Een overzichtelijke interface maken voor desktop én smartphone.
