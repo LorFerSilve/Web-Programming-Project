@@ -197,3 +197,25 @@ h2 { margin-bottom: 6px; font-size: 23px; letter-spacing: -.03em; }
   .main-nav { order: 4; }
   .auth-card { padding: 22px; }
 }
+
+/* Registraties in de toestelgeschiedenis */
+.history-panel, .attachments-panel { grid-column: 1 / -1; }
+.history-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 18px; }
+.history-heading h2 { margin-bottom: 6px; }
+.history-heading .button { flex-shrink: 0; }
+.registrations-list { display: grid; gap: 12px; }
+.registration-card { padding: 18px; border: 1px solid #e4e9ef; border-radius: 12px; background: #fafbfd; min-width: 0; }
+.registration-card-top, .registration-footer { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; }
+.registration-kind { display: inline-block; border-radius: 20px; padding: 5px 10px; font-size: 12px; font-weight: 750; background: #e7f4ee; color: #126a49; }
+.registration-kind-defect { background: #fff1df; color: #965800; }
+.registration-kind-herstelling { background: #e9efff; color: #3c58a1; }
+.registration-date { color: #65748a; font-size: 13px; }
+.registration-description { margin: 15px 0; white-space: pre-wrap; overflow-wrap: anywhere; color: #304155; line-height: 1.6; }
+.registration-cost { font-size: 13px; font-weight: 650; color: #526275; }
+.registration-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.registration-actions .button { padding: 8px 12px; font-size: 13px; }
+.field textarea { width: 100%; border: 1px solid #d8e0e9; border-radius: 9px; padding: 10px 12px; background: #fff; color: #28384a; font: inherit; font-weight: 400; resize: vertical; }
+@media (max-width: 600px) {
+  .history-heading { flex-direction: column; align-items: stretch; }
+  .history-heading .button { width: 100%; }
+}

@@ -164,3 +164,28 @@ en demonstratie. Zet haar niet rechtstreeks op het publieke internet zonder
 HTTPS, een passende reverse proxy en aanvullende beveiliging zoals
 aanmeldpogingbeperking. Er is in deze projectfase geen
 wachtwoordherstel of e-mailverificatie.
+
+## Onderhoud, defecten en herstellingen
+
+Open een toestel via **Bekijk details** en klik op
+**Registratie toevoegen**. Kies `onderhoud`, `defect` of `herstelling`
+en voer de datum en omschrijving in. Kosten in euro zijn optioneel.
+Iedere registratie verschijnt in de juiste toestelgeschiedenis (nieuwste
+datum eerst) en kan worden bewerkt of na bevestiging worden verwijderd.
+Gegevens blijven in SQLite na het herstarten van de server bewaard.
+
+Registraties van verschillende gebruikers of toestellen zijn strikt
+gescheiden. Kosten worden als **hele eurocenten** opgeslagen om
+afrondingsproblemen te vermijden. Een leeg kostenveld is `null`;
+ingevoerde nul euro is `0`. Bij het verwijderen van een toestel
+verdwijnen diens registraties automatisch via een database-foreign-key.
+
+De volgende endpoints vereisen een geldige sessie en eigenaarschap van
+het toestel:
+- `GET /api/devices/:id/registrations`
+- `POST /api/devices/:id/registrations`
+- `PUT /api/devices/:id/registrations/:registrationId`
+- `DELETE /api/devices/:id/registrations/:registrationId`
+
+Bij POST en PUT bestaat de JSON-body uit `type`, `date` (YYYY-MM-DD),
+`description` en optioneel `cost` (getal in euro of `null`).

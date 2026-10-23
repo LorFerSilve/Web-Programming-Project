@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="/styles.css">
   <script src="/auth-client.js" defer></script>
   <script src="/device.js" defer></script>
+  <script src="/registrations.js" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main">Ga naar inhoud</a>
@@ -56,16 +57,23 @@
           <p id="maintenance-status" class="status unplanned"></p>
           <p class="section-subtitle detail-space-top">Volgende onderhoudsdatum</p>
           <p id="maintenance-date" class="detail-date"></p>
-          <p class="section-subtitle">Onderhoudsregistraties en herinneringen worden in de volgende onderdelen toegevoegd.</p>
+          <p class="section-subtitle">Uitgevoerd onderhoud kun je nu in de toestelgeschiedenis hieronder registreren. Automatische herinneringen volgen later.</p>
         </section>
       </div>
 
       <div class="device-detail-grid secondary-panels">
-        <section class="detail-panel" aria-labelledby="history-title">
-          <h2 id="history-title">Onderhoudshistoriek</h2>
-          <p class="section-subtitle">Nog geen onderhoudsacties, defecten of herstellingen geregistreerd. Deze functionaliteit volgt in onderdeel 3.</p>
+        <section class="detail-panel history-panel" aria-labelledby="history-title">
+          <div class="history-heading">
+            <div>
+              <h2 id="history-title">Onderhoudshistoriek</h2>
+              <p class="section-subtitle">Onderhoudsacties, defecten en herstellingen van dit toestel.</p>
+            </div>
+            <button id="add-registration" type="button" class="button button-primary">+ Registratie toevoegen</button>
+          </div>
+          <p id="registrations-message" class="section-subtitle" role="status">Registraties laden…</p>
+          <div id="registrations-list" class="registrations-list" aria-live="polite"></div>
         </section>
-        <section class="detail-panel" aria-labelledby="files-title">
+        <section class="detail-panel attachments-panel" aria-labelledby="files-title">
           <h2 id="files-title">Foto's, documenten en links</h2>
           <p class="section-subtitle">Bijlagen en externe informatie kun je in een volgende ontwikkelstap aan dit toestel koppelen.</p>
         </section>
@@ -113,6 +121,40 @@
       <div class="modal-actions">
         <button type="button" id="cancel-edit-bottom" class="button button-secondary">Annuleren</button>
         <button type="submit" class="button button-primary">Wijzigingen opslaan</button>
+      </div>
+    </form>
+  </dialog>
+  <dialog id="registration-dialog" class="modal" aria-labelledby="registration-title">
+    <form id="registration-form">
+      <div class="modal-heading">
+        <div>
+          <p class="eyebrow">Onderhoudslogboek</p>
+          <h2 id="registration-title">Registratie toevoegen</h2>
+        </div>
+        <button id="close-registration" type="button" class="icon-button" aria-label="Sluiten">×</button>
+      </div>
+      <label class="field" for="registration-type">Soort registratie <span class="required">*</span>
+        <select id="registration-type" name="type" required>
+          <option value="onderhoud">Onderhoud</option>
+          <option value="defect">Defect</option>
+          <option value="herstelling">Herstelling</option>
+        </select>
+      </label>
+      <label class="field" for="registration-date">Datum <span class="required">*</span>
+        <input id="registration-date" name="date" type="date" required>
+      </label>
+      <label class="field" for="registration-description">Omschrijving <span class="required">*</span>
+        <textarea id="registration-description" name="description" rows="4" maxlength="2000"
+          required placeholder="Wat is er gebeurd of uitgevoerd?"></textarea>
+      </label>
+      <label class="field" for="registration-cost">Kosten in euro (optioneel)
+        <input id="registration-cost" name="cost" type="number" min="0" max="1000000"
+          step="0.01" placeholder="Bijv. 12,50">
+      </label>
+      <p id="registration-error" class="form-error" role="alert" hidden></p>
+      <div class="modal-actions">
+        <button id="cancel-registration" type="button" class="button button-secondary">Annuleren</button>
+        <button id="save-registration" type="submit" class="button button-primary">Opslaan</button>
       </div>
     </form>
   </dialog>

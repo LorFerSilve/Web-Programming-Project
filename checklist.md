@@ -27,12 +27,12 @@
 
 ## 3. Onderhoud, defecten en herstellingen
 
-- [ ] Per toestel een **onderhoudsactie** kunnen registreren.
-- [ ] Per toestel een **defect** kunnen registreren.
-- [ ] Per toestel een **herstelling** kunnen registreren.
-- [ ] Elke registratie kunnen bekijken, aanpassen en verwijderen.
-- [ ] Per registratie minstens datum en omschrijving bijhouden; optioneel ook kosten.
-- [ ] Alle registraties in de juiste toestelgeschiedenis tonen.
+- [x] Per toestel een **onderhoudsactie** kunnen registreren.
+- [x] Per toestel een **defect** kunnen registreren.
+- [x] Per toestel een **herstelling** kunnen registreren.
+- [x] Elke registratie kunnen bekijken, aanpassen en verwijderen.
+- [x] Per registratie minstens datum en omschrijving bijhouden; optioneel ook kosten.
+- [x] Alle registraties in de juiste toestelgeschiedenis tonen.
 
 **Eenvoudige aanpak:** één soort `registratie` met een veld `type` (`onderhoud`, `defect` of `herstelling`).
 
