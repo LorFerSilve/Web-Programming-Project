@@ -9,6 +9,7 @@
   <script src="/auth-client.js" defer></script>
   <script src="/device.js" defer></script>
   <script src="/registrations.js" defer></script>
+  <script src="/attachments.js" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main">Ga naar inhoud</a>
@@ -50,6 +51,10 @@
         <section class="detail-panel" aria-labelledby="info-title">
           <h2 id="info-title">Toestelgegevens</h2>
           <dl id="device-fields" class="details"></dl>
+          <div class="device-notes" id="notes-section">
+            <h3>Notities</h3>
+            <p id="device-notes-text"></p>
+          </div>
         </section>
 
         <section class="detail-panel" aria-labelledby="planning-title">
@@ -74,8 +79,26 @@
           <div id="registrations-list" class="registrations-list" aria-live="polite"></div>
         </section>
         <section class="detail-panel attachments-panel" aria-labelledby="files-title">
-          <h2 id="files-title">Foto's, documenten en links</h2>
-          <p class="section-subtitle">Bijlagen en externe informatie kun je in een volgende ontwikkelstap aan dit toestel koppelen.</p>
+          <div class="history-heading">
+            <div>
+              <h2 id="files-title">Foto's, documenten en links</h2>
+              <p class="section-subtitle">Bewaar foto's, PDF's, handleidingen en videolinks bij dit toestel of een registratie.</p>
+            </div>
+            <button id="add-attachment" type="button" class="button button-primary">+ Bijlage toevoegen</button>
+          </div>
+          <p id="attachments-status" class="section-subtitle" role="status">Bijlagen laden…</p>
+          <div id="attachments-list" class="attachments-list"></div>
+          <div class="wiki-section">
+            <div class="wiki-heading">
+              <div>
+                <h3>Externe informatie zoeken</h3>
+                <p class="section-subtitle">Zoek automatisch relevante achtergrondinformatie via Wikipedia.</p>
+              </div>
+              <button id="search-wiki" class="button button-secondary" type="button">Zoek op Wikipedia</button>
+            </div>
+            <p id="wiki-status" class="section-subtitle" role="status" hidden></p>
+            <div id="wiki-results" class="wiki-results"></div>
+          </div>
         </section>
       </div>
     </div>
@@ -113,6 +136,9 @@
       </div>
       <label class="field" for="device-purchase">Aankoopdatum
         <input id="device-purchase" name="purchaseDate" type="date">
+      </label>
+      <label class="field" for="device-notes">Notities (optioneel)
+        <textarea id="device-notes" name="notes" maxlength="5000" rows="4"></textarea>
       </label>
       <label class="field" for="device-maintenance">Volgende onderhoudsdatum
         <input id="device-maintenance" name="nextMaintenance" type="date">
@@ -155,6 +181,44 @@
       <div class="modal-actions">
         <button id="cancel-registration" type="button" class="button button-secondary">Annuleren</button>
         <button id="save-registration" type="submit" class="button button-primary">Opslaan</button>
+      </div>
+    </form>
+  </dialog>
+  <dialog id="attachment-dialog" class="modal" aria-labelledby="attachment-dialog-title">
+    <form id="attachment-form">
+      <div class="modal-heading">
+        <div>
+          <p class="eyebrow">Toestelbijlage</p>
+          <h2 id="attachment-dialog-title">Bijlage toevoegen</h2>
+        </div>
+        <button type="button" id="close-attachment" class="icon-button" aria-label="Sluiten">×</button>
+      </div>
+      <label class="field" for="attachment-kind">Wat wil je toevoegen?
+        <select id="attachment-kind" name="kind">
+          <option value="file">Foto of PDF-bestand</option>
+          <option value="link">Externe link of video</option>
+        </select>
+      </label>
+      <label class="field" for="attachment-registration">Koppelen aan
+        <select id="attachment-registration" name="registrationId">
+          <option value="">Algemeen bij dit toestel</option>
+        </select>
+      </label>
+      <label class="field" id="attachment-file-label" for="attachment-file">Foto of PDF (maximaal 5 MB)
+        <input id="attachment-file" name="file" type="file"
+          accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf">
+      </label>
+      <label class="field" id="attachment-title-label" for="attachment-title" hidden>Titel van de link
+        <input id="attachment-title" name="label" maxlength="120" placeholder="Bijv. Handleiding" >
+      </label>
+      <label class="field" id="attachment-url-label" for="attachment-url" hidden>URL (https:// of http://)
+        <input id="attachment-url" name="url" type="url" maxlength="2000"
+          placeholder="https://..." >
+      </label>
+      <p id="attachment-error" class="form-error" role="alert" hidden></p>
+      <div class="modal-actions">
+        <button id="cancel-attachment" type="button" class="button button-secondary">Annuleren</button>
+        <button id="save-attachment" type="submit" class="button button-primary">Bijlage opslaan</button>
       </div>
     </form>
   </dialog>

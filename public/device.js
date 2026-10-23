@@ -64,6 +64,8 @@ function renderDevice(device) {
     fields.append(make("dt", label), make("dd", value));
   }
 
+  document.querySelector("#device-notes-text").textContent =
+    device.notes || "Nog geen notities over dit toestel.";
   const status = document.querySelector("#maintenance-status");
   status.className = "status";
   if (!device.nextMaintenance) {
@@ -106,7 +108,7 @@ editButton.addEventListener("click", () => {
   if (!currentDevice) return;
   editForm.reset();
   formError.hidden = true;
-  for (const key of ["name", "type", "brand", "model", "purchaseDate", "nextMaintenance"]) {
+  for (const key of ["name", "type", "brand", "model", "purchaseDate", "nextMaintenance", "notes"]) {
     editForm.elements.namedItem(key).value = currentDevice[key] || "";
   }
   editDialog.showModal();
@@ -128,7 +130,8 @@ editForm.addEventListener("submit", async event => {
     brand: String(values.get("brand") || "").trim(),
     model: String(values.get("model") || "").trim(),
     purchaseDate: String(values.get("purchaseDate") || ""),
-    nextMaintenance: String(values.get("nextMaintenance") || "")
+    nextMaintenance: String(values.get("nextMaintenance") || ""),
+    notes: String(values.get("notes") || "")
   };
   if (!updated.name) {
     editForm.elements.namedItem("name").focus();

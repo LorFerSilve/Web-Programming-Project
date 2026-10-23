@@ -189,3 +189,41 @@ het toestel:
 
 Bij POST en PUT bestaat de JSON-body uit `type`, `date` (YYYY-MM-DD),
 `description` en optioneel `cost` (getal in euro of `null`).
+
+## Bijlagen, notities en Wikipedia (onderdeel 4)
+
+Op elke toestelpagina kun je een tekstnotitie invoeren via **Bewerken**.
+Elke onderhoudsregistratie beschikt al over een eigen omschrijving. Via
+**Bijlage toevoegen** kun je een foto, een PDF-bestand of een URL toevoegen,
+zowel aan het toestel als aan een specifieke registratie. Videolinks worden
+als gewone, veilig te openen URL's bewaard; video's worden niet op de server
+gedownload of ingebed.
+
+Upload via `POST /api/devices/:id/attachments/file` met ruwe bytes als
+body, `Content-Type` en `X-Filename` (URL-gecodeerde bestandsnaam);
+optioneel `?registrationId=<id>`. Alleen JPEG, PNG, WebP en PDF tot
+5 MB worden aanvaard. De server controleert bestandssignaturen en
+eigenaarschap. Het bestand komt onder een willekeurige naam in
+`data/uploads/` terecht, of bij Docker onder `/app/data/uploads/`.
+De SQLite-metadata en bestanden blijven dus in het bestaande Docker-volume.
+Een bijlage verwijderen verwijdert ook het bestand. Bij het verwijderen
+van een registratie of toestel worden de gekoppelde bestanden opgeruimd.
+
+- `GET /api/devices/:id/attachments` – alle gekoppelde bijlagen;
+- `POST /api/devices/:id/attachments` – link toevoegen met
+  `{ "label": "...", "url": "https://...", "registrationId": null }`;
+- `POST /api/devices/:id/attachments/file` – foto/PDF uploaden;
+- `GET /api/devices/:id/attachments/:attachmentId/file` – beschermd downloaden/openen;
+- `DELETE /api/devices/:id/attachments/:attachmentId` – verwijderen;
+- `GET /api/devices/:id/wiki` – Wiki-artikelen zoeken via de MediaWiki Action API.
+
+De **Wikipedia**-knop zoekt op merk/model of toestelnaam en toont korte
+samenvattingen uit de Nederlandstalige Wikipedia. Van ieder resultaat kun
+je het artikel openen of een link aan het toestel toevoegen. De API is
+bereikbaar vanaf de Express-server; een internetverbinding is vereist.
+Bij onbeschikbaarheid verschijnt een foutmelding, terwijl de rest van
+de applicatie blijft werken.
+
+Geen extra npm-dependencies nodig. De maximale uploadgrootte is 5 MB;
+gebruik de app via `localhost` of een geschikte HTTPS-opstelling
+voordat je buiten je eigen computer toegang verleent.

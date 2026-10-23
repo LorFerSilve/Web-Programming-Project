@@ -138,7 +138,8 @@ addForm.addEventListener("submit", async event => {
     brand: String(values.get("brand") || "").trim(),
     model: String(values.get("model") || "").trim(),
     purchaseDate: String(values.get("purchaseDate") || ""),
-    nextMaintenance: String(values.get("nextMaintenance") || "")
+    nextMaintenance: String(values.get("nextMaintenance") || ""),
+    notes: String(values.get("notes") || "")
   };
   if (!device.name) {
     document.querySelector("#device-name").focus();

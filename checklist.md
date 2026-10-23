@@ -38,13 +38,13 @@
 
 ## 4. Foto's, documenten en externe informatie
 
-- [ ] **Tekst en foto's** bij een toestel of registratie kunnen bewaren.
-- [ ] Een **document** (bijvoorbeeld een PDF-handleiding of factuur) kunnen uploaden en terug openen.
-- [ ] **Filmpjes** kunnen koppelen, bijvoorbeeld via een videolink.
-- [ ] **Externe links** kunnen koppelen, bijvoorbeeld naar een handleiding, productpagina of instructievideo.
-- [ ] Gekoppelde foto's, documenten en links eenvoudig kunnen bekijken en verwijderen.
-- [ ] Minstens **één vorm van externe informatie automatisch inlezen of verwerken**.
-- [ ] Daarvoor minstens **één externe API** daadwerkelijk gebruiken die een functionele meerwaarde biedt.
+- [x] **Tekst en foto's** bij een toestel of registratie kunnen bewaren.
+- [x] Een **document** (bijvoorbeeld een PDF-handleiding of factuur) kunnen uploaden en terug openen.
+- [x] **Filmpjes** kunnen koppelen, bijvoorbeeld via een videolink.
+- [x] **Externe links** kunnen koppelen, bijvoorbeeld naar een handleiding, productpagina of instructievideo.
+- [x] Gekoppelde foto's, documenten en links eenvoudig kunnen bekijken en verwijderen.
+- [x] Minstens **één vorm van externe informatie automatisch inlezen of verwerken**.
+- [x] Daarvoor minstens **één externe API** daadwerkelijk gebruiken die een functionele meerwaarde biedt.
 
 **Eenvoudige aanpak:** foto's en PDF's uploaden; video's als link bewaren. Via bijvoorbeeld de Wikipedia/MediaWiki API relevante toestelinformatie zoeken, een omschrijving ophalen en die aan het toestel koppelen. Zorg dat dit voor de meegeleverde voorbeeldtoestellen aantoonbaar werkt.
 

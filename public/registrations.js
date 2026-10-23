@@ -109,6 +109,7 @@ async function loadRegistrations() {
     if (!Array.isArray(records)) throw new Error("Ongeldig antwoord");
     registrations = records;
     renderRegistrations();
+    document.dispatchEvent(new Event("registrations-changed"));
   } catch (error) {
     registrationsList.replaceChildren();
     registrationsMessage.textContent = "Registraties niet beschikbaar. Herlaad de pagina om opnieuw te proberen.";
