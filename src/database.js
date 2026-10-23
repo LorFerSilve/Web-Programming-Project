@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 
 const defaultPath = fileURLToPath(new URL("../data/maintenance.sqlite", import.meta.url));
-const fields = "id, name, type, brand, model, next_maintenance AS nextMaintenance, purchase_date AS purchaseDate";
+const fields = "id, name, type, brand, model, next_maintenance AS nextMaintenance, purchase_date AS purchaseDate, notes";
 
 export function openDatabase(filename = process.env.DB_PATH || defaultPath) {
   if (filename !== ":memory:") mkdirSync(path.dirname(path.resolve(filename)), { recursive: true });
@@ -24,6 +24,7 @@ export function openDatabase(filename = process.env.DB_PATH || defaultPath) {
       name TEXT NOT NULL, type TEXT NOT NULL CHECK (type IN ('fiets','voertuig','apparaat','overig')),
       brand TEXT NOT NULL DEFAULT '', model TEXT NOT NULL DEFAULT '',
       next_maintenance TEXT NOT NULL DEFAULT '', purchase_date TEXT NOT NULL DEFAULT '',
+      notes TEXT NOT NULL DEFAULT '',
       user_id INTEGER REFERENCES users(id)
     );
     CREATE TABLE IF NOT EXISTS registrations (
@@ -34,6 +35,19 @@ export function openDatabase(filename = process.env.DB_PATH || defaultPath) {
       description TEXT NOT NULL,
       cost_cents INTEGER CHECK (cost_cents IS NULL OR cost_cents >= 0)
     );
+    CREATE TABLE IF NOT EXISTS attachments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      device_id INTEGER NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
+      registration_id INTEGER REFERENCES registrations(id) ON DELETE CASCADE,
+      kind TEXT NOT NULL CHECK (kind IN ('photo','document','link')),
+      label TEXT NOT NULL,
+      url TEXT,
+      mime_type TEXT,
+      original_name TEXT,
+      stored_name TEXT,
+      CHECK ((kind = 'link' AND url IS NOT NULL AND stored_name IS NULL) OR
+             (kind IN ('photo','document') AND stored_name IS NOT NULL AND url IS NULL))
+    );
   `);
   const columns = db.prepare("PRAGMA table_info(devices)").all().map(column => column.name);
   if (!columns.includes("purchase_date")) {
@@ -42,6 +56,10 @@ export function openDatabase(filename = process.env.DB_PATH || defaultPath) {
   if (!columns.includes("user_id")) {
     db.exec("ALTER TABLE devices ADD COLUMN user_id INTEGER REFERENCES users(id)");
   }
+  if (!columns.includes("notes")) {
+    db.exec("ALTER TABLE devices ADD COLUMN notes TEXT NOT NULL DEFAULT ''");
+  }
+  db.exec("CREATE INDEX IF NOT EXISTS idx_attachments_device ON attachments(device_id)");
   db.exec("CREATE INDEX IF NOT EXISTS idx_devices_user ON devices(user_id)");
   db.exec("CREATE INDEX IF NOT EXISTS idx_registrations_device_date ON registrations(device_id, date DESC, id DESC)");
   return db;
@@ -89,16 +107,16 @@ export function getDevice(db, userId, id) {
 }
 export function addDevice(db, userId, device) {
   const result = db.prepare(`INSERT INTO devices
-    (name, type, brand, model, next_maintenance, purchase_date, user_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?)`).run(device.name, device.type, device.brand,
-      device.model, device.nextMaintenance, device.purchaseDate ?? "", userId);
+    (name, type, brand, model, next_maintenance, purchase_date, notes, user_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).run(device.name, device.type, device.brand,
+      device.model, device.nextMaintenance, device.purchaseDate ?? "", device.notes ?? "", userId);
   return getDevice(db, userId, Number(result.lastInsertRowid));
 }
 export function updateDevice(db, userId, id, device) {
   const result = db.prepare(`UPDATE devices SET name = ?, type = ?, brand = ?,
-    model = ?, next_maintenance = ?, purchase_date = ?
+    model = ?, next_maintenance = ?, purchase_date = ?, notes = ?
     WHERE id = ? AND user_id = ?`).run(device.name, device.type, device.brand,
-      device.model, device.nextMaintenance, device.purchaseDate ?? "", id, userId);
+      device.model, device.nextMaintenance, device.purchaseDate ?? "", device.notes ?? "", id, userId);
   return result.changes ? getDevice(db, userId, id) : null;
 }
 export function deleteDevice(db, userId, id) {
@@ -157,4 +175,52 @@ export function deleteRegistration(db, userId, deviceId, registrationId) {
       SELECT 1 FROM devices WHERE devices.id = registrations.device_id AND user_id = ?
     )
   `).run(registrationId, deviceId, userId).changes > 0;
+}
+
+const attachmentFields = `id, device_id AS deviceId, registration_id AS registrationId,
+  kind, label, url, mime_type AS mimeType, original_name AS originalName`;
+
+export function listAttachments(db, userId, deviceId) {
+  return db.prepare(`
+    SELECT ${attachmentFields} FROM attachments
+    WHERE device_id = ? AND EXISTS (
+      SELECT 1 FROM devices WHERE devices.id = attachments.device_id AND user_id = ?
+    ) ORDER BY id DESC`).all(deviceId, userId);
+}
+export function getAttachment(db, userId, deviceId, attachmentId) {
+  return db.prepare(`
+    SELECT ${attachmentFields}, stored_name AS storedName FROM attachments
+    WHERE id = ? AND device_id = ? AND EXISTS (
+      SELECT 1 FROM devices WHERE devices.id = attachments.device_id AND user_id = ?
+    )`).get(attachmentId, deviceId, userId) ?? null;
+}
+export function addAttachment(db, userId, deviceId, attachment) {
+  const { registrationId = null, kind, label, url = null, mimeType = null,
+    originalName = null, storedName = null } = attachment;
+  const result = db.prepare(`
+    INSERT INTO attachments
+      (device_id, registration_id, kind, label, url, mime_type, original_name, stored_name)
+    SELECT devices.id, ?, ?, ?, ?, ?, ?, ?
+    FROM devices WHERE devices.id = ? AND devices.user_id = ?
+      AND (? IS NULL OR EXISTS (
+        SELECT 1 FROM registrations
+        WHERE registrations.id = ? AND registrations.device_id = devices.id
+      ))`).run(registrationId, kind, label, url, mimeType, originalName,
+        storedName, deviceId, userId, registrationId, registrationId);
+  return result.changes ? getAttachment(db, userId, deviceId, Number(result.lastInsertRowid)) : null;
+}
+export function deleteAttachment(db, userId, deviceId, attachmentId) {
+  return db.prepare(`
+    DELETE FROM attachments WHERE id = ? AND device_id = ?
+    AND EXISTS (SELECT 1 FROM devices WHERE devices.id = attachments.device_id AND user_id = ?)
+  `).run(attachmentId, deviceId, userId).changes > 0;
+}
+// Ophalen vóór cascade-deletes om ook opgeslagen bestanden op te kunnen ruimen.
+export function attachmentFiles(db, userId, deviceId, registrationId = undefined) {
+  const sql = `SELECT stored_name AS storedName FROM attachments
+    WHERE device_id = ? AND stored_name IS NOT NULL AND
+    EXISTS (SELECT 1 FROM devices WHERE devices.id = attachments.device_id AND user_id = ?)` +
+    (registrationId === undefined ? "" : " AND registration_id = ?");
+  return db.prepare(sql).all(...(registrationId === undefined ?
+    [deviceId, userId] : [deviceId, userId, registrationId]));
 }
