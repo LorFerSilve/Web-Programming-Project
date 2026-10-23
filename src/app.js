@@ -4,7 +4,8 @@ import { randomBytes, createHash, scrypt as scryptCallback, timingSafeEqual } fr
 import { promisify } from "node:util";
 import {
   addDevice, createSession, createUser, deleteDevice, deleteSession,
-  findUserByEmail, getDevice, sessionUser, listDevices, updateDevice
+  findUserByEmail, getDevice, sessionUser, listDevices, updateDevice,
+  addRegistration, listRegistrations, getRegistration, updateRegistration, deleteRegistration
 } from "./database.js";
 
 const scrypt = promisify(scryptCallback);
@@ -28,6 +29,22 @@ function parseDevice(body) {
       typeof purchaseDate !== "string" || !validDate(purchaseDate)) return null;
   return { name: name.trim(), type, brand: brand.trim(), model: model.trim(), nextMaintenance, purchaseDate };
 }
+const registrationTypes = new Set(["onderhoud", "defect", "herstelling"]);
+
+function parseRegistration(body) {
+  if (!body || typeof body !== "object" || Array.isArray(body)) return null;
+  const { type, date, description, cost = null } = body;
+  if (!registrationTypes.has(type) || typeof date !== "string" ||
+      date === "" || !validDate(date) ||
+      typeof description !== "string" || !description.trim() ||
+      description.trim().length > 2000) return null;
+  if (cost !== null && (typeof cost !== "number" || !Number.isFinite(cost) ||
+      cost < 0 || cost > 1000000 ||
+      Math.abs(cost * 100 - Math.round(cost * 100)) > 0.000001)) return null;
+  return { type, date, description: description.trim(),
+    costCents: cost === null ? null : Math.round(cost * 100) };
+}
+
 function parseId(raw) {
   if (!/^\d+$/.test(raw)) return null;
   const id = Number(raw);
@@ -176,6 +193,54 @@ export default function createApp(db) {
     }
     return response.sendStatus(204);
   });
+  app.get("/api/devices/:id/registrations", (request, response) => {
+    const deviceId = parseId(request.params.id);
+    if (deviceId === null) return response.status(400).json({ error: "Ongeldig toestel-ID." });
+    if (!getDevice(db, request.user.id, deviceId)) {
+      return response.status(404).json({ error: "Toestel niet gevonden." });
+    }
+    return response.json(listRegistrations(db, request.user.id, deviceId));
+  });
+
+  app.post("/api/devices/:id/registrations", (request, response) => {
+    const deviceId = parseId(request.params.id);
+    if (deviceId === null) return response.status(400).json({ error: "Ongeldig toestel-ID." });
+    if (!getDevice(db, request.user.id, deviceId)) {
+      return response.status(404).json({ error: "Toestel niet gevonden." });
+    }
+    const registration = parseRegistration(request.body);
+    if (!registration) return response.status(400).json({ error: "Ongeldige registratiegegevens." });
+    return response.status(201).json(addRegistration(db, request.user.id, deviceId, registration));
+  });
+
+  app.put("/api/devices/:id/registrations/:registrationId", (request, response) => {
+    const deviceId = parseId(request.params.id);
+    const registrationId = parseId(request.params.registrationId);
+    if (deviceId === null || registrationId === null) {
+      return response.status(400).json({ error: "Ongeldig toestel- of registratie-ID." });
+    }
+    if (!getDevice(db, request.user.id, deviceId)) {
+      return response.status(404).json({ error: "Toestel niet gevonden." });
+    }
+    const registration = parseRegistration(request.body);
+    if (!registration) return response.status(400).json({ error: "Ongeldige registratiegegevens." });
+    const updated = updateRegistration(db, request.user.id, deviceId, registrationId, registration);
+    if (!updated) return response.status(404).json({ error: "Registratie niet gevonden." });
+    return response.json(updated);
+  });
+
+  app.delete("/api/devices/:id/registrations/:registrationId", (request, response) => {
+    const deviceId = parseId(request.params.id);
+    const registrationId = parseId(request.params.registrationId);
+    if (deviceId === null || registrationId === null) {
+      return response.status(400).json({ error: "Ongeldig toestel- of registratie-ID." });
+    }
+    if (!deleteRegistration(db, request.user.id, deviceId, registrationId)) {
+      return response.status(404).json({ error: "Registratie niet gevonden." });
+    }
+    return response.sendStatus(204);
+  });
+
   app.get("/devices/:id", (request, response) => {
     if (!request.user) return response.redirect("/login");
     const id = parseId(request.params.id);

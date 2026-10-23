@@ -26,6 +26,14 @@ export function openDatabase(filename = process.env.DB_PATH || defaultPath) {
       next_maintenance TEXT NOT NULL DEFAULT '', purchase_date TEXT NOT NULL DEFAULT '',
       user_id INTEGER REFERENCES users(id)
     );
+    CREATE TABLE IF NOT EXISTS registrations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      device_id INTEGER NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
+      type TEXT NOT NULL CHECK (type IN ('onderhoud','defect','herstelling')),
+      date TEXT NOT NULL,
+      description TEXT NOT NULL,
+      cost_cents INTEGER CHECK (cost_cents IS NULL OR cost_cents >= 0)
+    );
   `);
   const columns = db.prepare("PRAGMA table_info(devices)").all().map(column => column.name);
   if (!columns.includes("purchase_date")) {
@@ -35,6 +43,7 @@ export function openDatabase(filename = process.env.DB_PATH || defaultPath) {
     db.exec("ALTER TABLE devices ADD COLUMN user_id INTEGER REFERENCES users(id)");
   }
   db.exec("CREATE INDEX IF NOT EXISTS idx_devices_user ON devices(user_id)");
+  db.exec("CREATE INDEX IF NOT EXISTS idx_registrations_device_date ON registrations(device_id, date DESC, id DESC)");
   return db;
 }
 
@@ -95,4 +104,57 @@ export function updateDevice(db, userId, id, device) {
 export function deleteDevice(db, userId, id) {
   return db.prepare("DELETE FROM devices WHERE id = ? AND user_id = ?")
     .run(id, userId).changes > 0;
+}
+
+const registrationFields = "id, device_id AS deviceId, type, date, description, cost_cents / 100.0 AS cost";
+
+export function listRegistrations(db, userId, deviceId) {
+  return db.prepare(`
+    SELECT ${registrationFields}
+    FROM registrations
+    WHERE device_id = ? AND EXISTS (
+      SELECT 1 FROM devices WHERE devices.id = registrations.device_id AND user_id = ?
+    )
+    ORDER BY date DESC, id DESC
+  `).all(deviceId, userId);
+}
+
+export function getRegistration(db, userId, deviceId, registrationId) {
+  return db.prepare(`
+    SELECT ${registrationFields}
+    FROM registrations
+    WHERE id = ? AND device_id = ? AND EXISTS (
+      SELECT 1 FROM devices WHERE devices.id = registrations.device_id AND user_id = ?
+    )
+  `).get(registrationId, deviceId, userId) ?? null;
+}
+
+export function addRegistration(db, userId, deviceId, registration) {
+  const result = db.prepare(`
+    INSERT INTO registrations (device_id, type, date, description, cost_cents)
+    SELECT id, ?, ?, ?, ? FROM devices WHERE id = ? AND user_id = ?
+  `).run(registration.type, registration.date, registration.description,
+    registration.costCents, deviceId, userId);
+  if (!result.changes) return null;
+  return getRegistration(db, userId, deviceId, Number(result.lastInsertRowid));
+}
+
+export function updateRegistration(db, userId, deviceId, registrationId, registration) {
+  const result = db.prepare(`
+    UPDATE registrations SET type = ?, date = ?, description = ?, cost_cents = ?
+    WHERE id = ? AND device_id = ? AND EXISTS (
+      SELECT 1 FROM devices WHERE devices.id = registrations.device_id AND user_id = ?
+    )
+  `).run(registration.type, registration.date, registration.description,
+    registration.costCents, registrationId, deviceId, userId);
+  return result.changes ? getRegistration(db, userId, deviceId, registrationId) : null;
+}
+
+export function deleteRegistration(db, userId, deviceId, registrationId) {
+  return db.prepare(`
+    DELETE FROM registrations
+    WHERE id = ? AND device_id = ? AND EXISTS (
+      SELECT 1 FROM devices WHERE devices.id = registrations.device_id AND user_id = ?
+    )
+  `).run(registrationId, deviceId, userId).changes > 0;
 }
