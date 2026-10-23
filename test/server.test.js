@@ -128,3 +128,122 @@ test("Ongeldige ID, invoer en cross-origin schrijfacties worden geweigerd", () =
   assert.equal((await req(base, "/api/devices", "POST", cookie, device("Fiets"),
     { Origin: base })).status, 201);
 }));
+
+const record = (type = "onderhoud", date = "2026-05-10", description = "Ketting gesmeerd", cost = null) =>
+  ({ type, date, description, cost });
+
+test("Onderhoud, defecten en herstellingen verschijnen chronologisch in de juiste geschiedenis", () => serverTest(async base => {
+  const cookie = await register(base, "Alice", "history@example.org");
+  const one = await (await req(base, "/api/devices", "POST", cookie, device("Fiets"))).json();
+  const other = await (await req(base, "/api/devices", "POST", cookie, device("Auto"))).json();
+  const url = `/api/devices/${one.id}/registrations`;
+  assert.deepEqual(await (await req(base, url, "GET", cookie)).json(), []);
+  const maintenance = await req(base, url, "POST", cookie,
+    record("onderhoud", "2026-01-01", "Ketting gesmeerd", 12.50));
+  assert.equal(maintenance.status, 201);
+  const first = await maintenance.json();
+  assert.equal(first.type, "onderhoud");
+  assert.equal(first.cost, 12.5);
+  assert.equal(first.deviceId, one.id);
+  const broken = await req(base, url, "POST", cookie,
+    record("defect", "2026-03-01", "Rem blokkeert"));
+  assert.equal(broken.status, 201);
+  const second = await broken.json();
+  assert.equal(second.cost, null);
+  const fixed = await req(base, url, "POST", cookie,
+    record("herstelling", "2026-02-01", "Rem gerepareerd", 0));
+  assert.equal(fixed.status, 201);
+  const third = await fixed.json();
+  assert.equal(third.cost, 0);
+  assert.deepEqual(await (await req(base, url, "GET", cookie)).json(), [second, third, first]);
+  assert.deepEqual(await (await req(base,
+    `/api/devices/${other.id}/registrations`, "GET", cookie)).json(), []);
+}));
+
+test("Registraties kunnen worden aangepast en verwijderd zonder andere registraties te wijzigen", () => serverTest(async base => {
+  const cookie = await register(base, "Alice", "editrecord@example.org");
+  const dev = await (await req(base, "/api/devices", "POST", cookie, device("Fiets"))).json();
+  const url = `/api/devices/${dev.id}/registrations`;
+  const first = await (await req(base, url, "POST", cookie,
+    record("defect", "2026-04-01", "Lekke band"))).json();
+  const other = await (await req(base, url, "POST", cookie,
+    record("onderhoud", "2026-04-02", "Ketting"))).json();
+  const update = await req(base, `${url}/${first.id}`, "PUT", cookie,
+    record("herstelling", "2026-04-03", "Band vervangen", 19.95));
+  assert.equal(update.status, 200);
+  const updated = await update.json();
+  assert.equal(updated.id, first.id);
+  assert.equal(updated.cost, 19.95);
+  assert.deepEqual(await (await req(base, url, "GET", cookie)).json(), [updated, other]);
+  assert.equal((await req(base, `${url}/${first.id}`, "DELETE", cookie)).status, 204);
+  assert.deepEqual(await (await req(base, url, "GET", cookie)).json(), [other]);
+  assert.equal((await req(base, `${url}/${first.id}`, "DELETE", cookie)).status, 404);
+}));
+
+test("Registratie-API blokkeert onbekende toestellen, ongeldige invoer en IDs", () => serverTest(async base => {
+  const cookie = await register(base, "Alice", "badrecord@example.org");
+  const dev = await (await req(base, "/api/devices", "POST", cookie, device("Fiets"))).json();
+  const url = `/api/devices/${dev.id}/registrations`;
+  assert.equal((await req(base, "/api/devices/nope/registrations", "GET", cookie)).status, 400);
+  assert.equal((await req(base, "/api/devices/99999/registrations", "GET", cookie)).status, 404);
+  assert.equal((await req(base, "/api/devices/99999/registrations", "POST", cookie, record())).status, 404);
+  for (const invalid of [
+    record("ander"), record("onderhoud", "2026-02-30"),
+    record("onderhoud", ""), record("onderhoud", "2026-05-10", ""),
+    record("onderhoud", "2026-05-10", "test", -1),
+    record("onderhoud", "2026-05-10", "test", 10.123),
+    record("onderhoud", "2026-05-10", "test", "10.00"),
+    record("onderhoud", "2026-05-10", "test", 1000000.01)
+  ]) assert.equal((await req(base, url, "POST", cookie, invalid)).status, 400);
+  const saved = await (await req(base, url, "POST", cookie, record())).json();
+  assert.equal((await req(base, `${url}/abc`, "PUT", cookie, record())).status, 400);
+  assert.equal((await req(base, `${url}/0`, "DELETE", cookie)).status, 400);
+  assert.equal((await req(base, `${url}/9999`, "PUT", cookie, record())).status, 404);
+  assert.equal((await req(base, `${url}/${saved.id}`, "PUT", cookie, record("fout"))).status, 400);
+  assert.equal((await (await req(base, url, "GET", cookie)).json())[0].type, "onderhoud");
+}));
+
+test("Gebruiker B kan andermans registraties niet lezen, aanpassen of verwijderen", () => serverTest(async base => {
+  const a = await register(base, "Alice", "records-a@example.org");
+  const b = await register(base, "Bob", "records-b@example.org");
+  const deviceA = await (await req(base, "/api/devices", "POST", a, device("Fiets A"))).json();
+  const deviceB = await (await req(base, "/api/devices", "POST", b, device("Fiets B"))).json();
+  const urlA = `/api/devices/${deviceA.id}/registrations`;
+  const urlB = `/api/devices/${deviceB.id}/registrations`;
+  const saved = await (await req(base, urlA, "POST", a, record("defect"))).json();
+  assert.equal((await req(base, urlA, "GET", b)).status, 404);
+  assert.equal((await req(base, urlA, "POST", b, record())).status, 404);
+  assert.equal((await req(base, `${urlA}/${saved.id}`, "PUT", b, record())).status, 404);
+  assert.equal((await req(base, `${urlA}/${saved.id}`, "DELETE", b)).status, 404);
+  assert.equal((await req(base, `${urlB}/${saved.id}`, "PUT", b, record())).status, 404);
+  assert.equal((await req(base, `${urlB}/${saved.id}`, "DELETE", b)).status, 404);
+  assert.equal((await req(base, urlA, "GET")).status, 401);
+  assert.equal((await req(base, urlA, "POST", null, record())).status, 401);
+  assert.equal((await req(base, `${urlA}/${saved.id}`, "DELETE")).status, 401);
+  assert.equal((await (await req(base, urlA, "GET", a)).json())[0].type, "defect");
+}));
+
+test("Wissen van een toestel verwijdert de bijhorende registraties", () => serverTest(async base => {
+  const cookie = await register(base, "Alice", "records-cascade@example.org");
+  const first = await (await req(base, "/api/devices", "POST", cookie, device("Fiets"))).json();
+  const second = await (await req(base, "/api/devices", "POST", cookie, device("Auto"))).json();
+  const firstRecord = await (await req(base,
+    `/api/devices/${first.id}/registrations`, "POST", cookie, record())).json();
+  const secondRecord = await (await req(base,
+    `/api/devices/${second.id}/registrations`, "POST", cookie, record())).json();
+  assert.ok(firstRecord.id);
+  assert.equal((await req(base, `/api/devices/${first.id}`, "DELETE", cookie)).status, 204);
+  assert.equal((await req(base, `/api/devices/${first.id}/registrations`, "GET", cookie)).status, 404);
+  assert.deepEqual(await (await req(base,
+    `/api/devices/${second.id}/registrations`, "GET", cookie)).json(), [secondRecord]);
+}));
+
+test("Registratie-API weigert cross-origin schrijfacties", () => serverTest(async base => {
+  const cookie = await register(base, "Alice", "records-csrf@example.org");
+  const dev = await (await req(base, "/api/devices", "POST", cookie, device("Fiets"))).json();
+  const url = `/api/devices/${dev.id}/registrations`;
+  assert.equal((await req(base, url, "POST", cookie, record(),
+    { Origin: "https://evil.example" })).status, 403);
+  assert.deepEqual(await (await req(base, url, "GET", cookie)).json(), []);
+  assert.equal((await req(base, url, "POST", cookie, record(), { Origin: base })).status, 201);
+}));
