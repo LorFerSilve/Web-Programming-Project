@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync, readdirSync } from "node:fs";
+import { mkdtempSync, rmSync, readdirSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { once } from "node:events";
@@ -165,7 +165,7 @@ test("Ongeldige, gevaarlijke en te grote bestanden worden geweigerd", async () =
     assert.equal((await request(base, `/api/devices/${d.id}/attachments`, cookie)).status, 200);
     assert.deepEqual(await (await request(base, `/api/devices/${d.id}/attachments`, cookie)).json(), []);
     // Mislukte uploads maken geen bestanden aan.
-    assert.equal(readdirSync(uploadDir, { withFileTypes: true }).length, 0);
+    assert.equal(existsSync(uploadDir) ? readdirSync(uploadDir).length : 0, 0);
   });
 });
 
@@ -276,4 +276,26 @@ test("Bij onbereikbare MediaWiki-API blijft de app werken", async () => {
     assert.match((await wiki.json()).error, /Wikipedia/);
     assert.equal((await request(base, "/api/devices", cookie)).status, 200);
   }, { wikiFetch: async () => { throw new Error("Netwerk offline"); } });
+});
+
+test("MediaWiki probeert categorie als een specifiek merk geen resultaat oplevert", async () => {
+  const terms = [];
+  const wikiFetch = async url => {
+    const term = new URL(url).searchParams.get("gsrsearch");
+    terms.push(term);
+    return { ok: true, json: async () =>
+      term === "fiets" ? { query: { pages: [{ title: "Fiets",
+        extract: "Fiets als vervoermiddel.", fullurl: "https://nl.wikipedia.org/wiki/Fiets" }] } } :
+        { query: { pages: [] } } };
+  };
+  await fixture(async ({ base }) => {
+    const cookie = await account(base, "Alice", "fallback@example.org");
+    const d = await createDevice(base, cookie, "Mijn Gazelle");
+    const response = await request(base, `/api/devices/${d.id}/wiki`, cookie);
+    assert.equal(response.status, 200);
+    const result = await response.json();
+    assert.equal(result.query, "fiets");
+    assert.equal(result.suggestions[0].title, "Fiets");
+    assert.deepEqual(terms, ["Gazelle Esprit", "fiets"]);
+  }, { wikiFetch });
 });

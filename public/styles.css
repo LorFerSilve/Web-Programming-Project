@@ -241,3 +241,6 @@ h2 { margin-bottom: 6px; font-size: 23px; letter-spacing: -.03em; }
   .wiki-heading { flex-direction: column; }
   .wiki-heading .button { width: 100%; }
 }
+
+/* Labels met hidden mogen niet door de algemene .field-displayregel zichtbaar worden. */
+.modal label.field[hidden] { display: none; }

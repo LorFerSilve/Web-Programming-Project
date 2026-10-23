@@ -406,26 +406,34 @@ export default function createApp(db, options = {}) {
     const device = getDevice(db, request.user.id, id);
     const query = [device.brand, device.model].filter(Boolean).join(" ") ||
       device.name || device.type;
-    const params = new URLSearchParams({
-      action: "query", generator: "search", gsrsearch: query.slice(0, 100),
-      gsrlimit: "4", prop: "info|extracts", inprop: "url",
-      exintro: "1", explaintext: "1", exchars: "500", format: "json", formatversion: "2"
-    });
     try {
-      const remote = await wikiFetch("https://nl.wikipedia.org/w/api.php?" + params,
-        { headers: { "User-Agent": "OnderhoudslogboekStudent/0.1 (education project)" },
-          signal: AbortSignal.timeout(8000) });
-      if (!remote.ok) throw new Error("Wikipedia is tijdelijk niet bereikbaar");
-      const result = await remote.json();
-      const suggestions = (result.query?.pages || [])
-        .filter(page => !page.missing && typeof page.title === "string")
-        .slice(0, 4).map(page => ({
-          title: page.title,
-          summary: typeof page.extract === "string" ? page.extract.slice(0, 550) : "",
-          url: typeof page.fullurl === "string" && page.fullurl.startsWith("https://nl.wikipedia.org/") ?
-            page.fullurl : "https://nl.wikipedia.org/wiki/" + encodeURIComponent(page.title.replaceAll(" ", "_"))
-        }));
-      return response.json({ query, source: "Wikipedia (MediaWiki API)", suggestions });
+      let usedQuery = query;
+      let suggestions = [];
+      // Zoek eerst specifiek op het toestel, daarna op de categorie als niets gevonden is.
+      for (const term of [...new Set([query, device.type])]) {
+        const params = new URLSearchParams({
+          action: "query", generator: "search", gsrsearch: term.slice(0, 100),
+          gsrlimit: "4", prop: "info|extracts", inprop: "url",
+          exintro: "1", explaintext: "1", exchars: "500", format: "json", formatversion: "2"
+        });
+        const remote = await wikiFetch("https://nl.wikipedia.org/w/api.php?" + params,
+          { headers: { "User-Agent":
+              "WebProgrammingOnderhoudslogboek/0.1 (https://github.com/LorFerSilve/Web-Programming-Project)" },
+            signal: AbortSignal.timeout(8000) });
+        if (!remote.ok) throw new Error("Wikipedia is tijdelijk niet bereikbaar");
+        const result = await remote.json();
+        suggestions = (result.query?.pages || [])
+          .filter(page => !page.missing && typeof page.title === "string")
+          .slice(0, 4).map(page => ({
+            title: page.title,
+            summary: typeof page.extract === "string" ? page.extract.slice(0, 550) : "",
+            url: typeof page.fullurl === "string" && page.fullurl.startsWith("https://nl.wikipedia.org/") ?
+              page.fullurl : "https://nl.wikipedia.org/wiki/" + encodeURIComponent(page.title.replaceAll(" ", "_"))
+          }));
+        usedQuery = term;
+        if (suggestions.length) break;
+      }
+      return response.json({ query: usedQuery, source: "Wikipedia (MediaWiki API)", suggestions });
     } catch {
       return response.status(502).json({ error: "Wikipedia kon niet worden geraadpleegd. Probeer later opnieuw." });
     }

@@ -227,3 +227,5 @@ de applicatie blijft werken.
 Geen extra npm-dependencies nodig. De maximale uploadgrootte is 5 MB;
 gebruik de app via `localhost` of een geschikte HTTPS-opstelling
 voordat je buiten je eigen computer toegang verleent.
+
+Als de zoekopdracht op merk en model geen artikelen oplevert, probeert de Wikipedia-functie automatisch de algemene toestelcategorie.
