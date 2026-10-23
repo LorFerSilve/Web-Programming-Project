@@ -1,160 +1,115 @@
 import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { DatabaseSync } from "node:sqlite";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { addDevice, deleteDevice, getDevice, listDevices, openDatabase, updateDevice } from "../src/database.js";
+import {
+  openDatabase, createUser, findUserByEmail, createSession, sessionUser,
+  deleteSession, listDevices, getDevice, addDevice, updateDevice, deleteDevice
+} from "../src/database.js";
 
-test("SQLite bewaart toestellen na sluiten en opnieuw openen", () => {
-  const directory = mkdtempSync(path.join(tmpdir(), "maintenance-db-"));
-  const file = path.join(directory, "nested", "maintenance.sqlite");
-  try {
-    const first = openDatabase(file);
-    const saved = addDevice(first, {
-      name: "Stadsfiets", type: "fiets", brand: "Gazelle",
-      model: "Esprit", nextMaintenance: "2026-12-01"
-    });
-    assert.equal(typeof saved.id, "number");
-    first.close();
+const details = name => ({ name, type: "fiets", brand: "Gazelle",
+  model: "", nextMaintenance: "", purchaseDate: "2025-03-10" });
+const register = (db, email) => createUser(db, email, email, "hashed-password");
 
-    const reopened = openDatabase(file);
-    assert.deepEqual(listDevices(reopened), [saved]);
-    reopened.close();
-  } finally {
-    rmSync(directory, { recursive: true, force: true });
-  }
-});
-
-test("Een lege database heeft een lege toestellenlijst", () => {
+test("Nieuwe gebruikers beginnen met een lege toestellenlijst", () => {
   const db = openDatabase(":memory:");
-  assert.deepEqual(listDevices(db), []);
-  db.close();
+  try {
+    const a = register(db, "a@example.org"), b = register(db, "b@example.org");
+    assert.deepEqual(listDevices(db, a.id), []);
+    assert.deepEqual(listDevices(db, b.id), []);
+    assert.equal(findUserByEmail(db, "A@EXAMPLE.ORG").id, a.id);
+  } finally { db.close(); }
 });
 
+test("Meerdere toestellen blijven aan de juiste gebruiker gekoppeld", () => {
+  const db = openDatabase(":memory:");
+  try {
+    const a = register(db, "a@example.org"), b = register(db, "b@example.org");
+    const one = addDevice(db, a.id, details("Fiets"));
+    const two = addDevice(db, a.id, details("Scooter"));
+    const other = addDevice(db, b.id, details("Printer"));
+    assert.deepEqual(listDevices(db, a.id), [two, one]);
+    assert.deepEqual(listDevices(db, b.id), [other]);
+    assert.deepEqual(getDevice(db, a.id, one.id), one);
+    assert.equal(getDevice(db, b.id, one.id), null);
+    assert.equal(updateDevice(db, b.id, one.id, details("Hacked")), null);
+    assert.equal(deleteDevice(db, b.id, one.id), false);
+    assert.equal(updateDevice(db, a.id, one.id, details("Racefiets")).name, "Racefiets");
+    assert.equal(deleteDevice(db, a.id, two.id), true);
+    assert.deepEqual(listDevices(db, b.id), [other]);
+  } finally { db.close(); }
+});
 
-test("Toestellen aanpassen en verwijderen blijft bewaard na heropenen", () => {
-  const directory = mkdtempSync(path.join(tmpdir(), "maintenance-crud-"));
-  const file = path.join(directory, "maintenance.sqlite");
+test("Toestellen en sessies blijven na heropenen bewaard", () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "logbook-auth-"));
+  const file = path.join(dir, "maintenance.sqlite");
   try {
     const db = openDatabase(file);
-    const inserted = addDevice(db, {
-      name: "Stadsfiets", type: "fiets", brand: "Gazelle",
-      model: "", nextMaintenance: ""
-    });
-    const updated = updateDevice(db, inserted.id, {
-      name: "Racefiets", type: "fiets", brand: "Trek",
-      model: "Domane", nextMaintenance: "2026-12-05"
-    });
-    assert.equal(updated.name, "Racefiets");
-    assert.equal(updated.id, inserted.id);
-    assert.equal(updateDevice(db, 99999, {
-      name: "Niet bestaand", type: "fiets", brand: "", model: "", nextMaintenance: ""
-    }), null);
+    const a = register(db, "a@example.org");
+    const saved = addDevice(db, a.id, details("Fiets"));
+    createSession(db, "test-digest", a.id, Date.now() + 60000);
     db.close();
-
     const reopened = openDatabase(file);
-    assert.deepEqual(listDevices(reopened), [updated]);
-    assert.equal(deleteDevice(reopened, updated.id), true);
-    assert.equal(deleteDevice(reopened, updated.id), false);
+    assert.deepEqual(listDevices(reopened, a.id), [saved]);
+    assert.equal(sessionUser(reopened, "test-digest", Date.now()).id, a.id);
+    assert.equal(sessionUser(reopened, "test-digest", Date.now() + 999999), null);
+    deleteSession(reopened, "test-digest");
+    assert.equal(sessionUser(reopened, "test-digest", Date.now()), null);
     reopened.close();
-
-    const again = openDatabase(file);
-    assert.deepEqual(listDevices(again), []);
-    again.close();
-  } finally {
-    rmSync(directory, { recursive: true, force: true });
-  }
+  } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
-test("Meerdere toestellen hebben onafhankelijke gegevens en CRUD-operaties", () => {
+test("Historische toestellen zonder aankoopdatum gaan naar het eerste account", () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "logbook-migration-"));
+  const file = path.join(dir, "maintenance.sqlite");
+  try {
+    const old = new DatabaseSync(file);
+    old.exec(`CREATE TABLE devices (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, type TEXT NOT NULL,
+      brand TEXT NOT NULL DEFAULT '', model TEXT NOT NULL DEFAULT '',
+      next_maintenance TEXT NOT NULL DEFAULT ''
+    );
+    INSERT INTO devices (name, type) VALUES ('Oude fiets', 'fiets');`);
+    old.close();
+    const db = openDatabase(file);
+    const a = register(db, "a@example.org");
+    assert.equal(listDevices(db, a.id)[0].name, "Oude fiets");
+    assert.equal(listDevices(db, a.id)[0].purchaseDate, "");
+    const b = register(db, "b@example.org");
+    assert.deepEqual(listDevices(db, b.id), []);
+    db.close();
+    const reopened = openDatabase(file);
+    assert.equal(listDevices(reopened, a.id)[0].name, "Oude fiets");
+    reopened.close();
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("Historische toestellen met aankoopdatum behouden die datum", () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "logbook-v2-"));
+  const file = path.join(dir, "maintenance.sqlite");
+  try {
+    const old = new DatabaseSync(file);
+    old.exec(`CREATE TABLE devices (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, type TEXT NOT NULL,
+      brand TEXT NOT NULL DEFAULT '', model TEXT NOT NULL DEFAULT '',
+      next_maintenance TEXT NOT NULL DEFAULT '', purchase_date TEXT NOT NULL DEFAULT ''
+    ); INSERT INTO devices (name, type, purchase_date)
+    VALUES ('Toestel', 'apparaat', '2024-05-05');`);
+    old.close();
+    const db = openDatabase(file);
+    const a = register(db, "a@example.org");
+    assert.equal(listDevices(db, a.id)[0].purchaseDate, "2024-05-05");
+    db.close();
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("E-mailadressen zijn case-insensitief uniek", () => {
   const db = openDatabase(":memory:");
   try {
-    const fiets = addDevice(db, {
-      name: "Fiets", type: "fiets", brand: "", model: "",
-      nextMaintenance: "", purchaseDate: "2025-02-01"
-    });
-    const koffie = addDevice(db, {
-      name: "Koffiemachine", type: "apparaat", brand: "", model: "",
-      nextMaintenance: "", purchaseDate: ""
-    });
-    const printer = addDevice(db, {
-      name: "3D-printer", type: "apparaat", brand: "", model: "",
-      nextMaintenance: "", purchaseDate: "2026-01-15"
-    });
-
-    assert.equal(listDevices(db).length, 3);
-    assert.deepEqual(new Set(listDevices(db).map(device => device.id)),
-      new Set([fiets.id, koffie.id, printer.id]));
-
-    const updated = updateDevice(db, koffie.id, {
-      name: "Espressomachine", type: "apparaat", brand: "De'Longhi",
-      model: "", nextMaintenance: "", purchaseDate: "2026-03-10"
-    });
-    assert.equal(updated.purchaseDate, "2026-03-10");
-    assert.deepEqual(listDevices(db).find(device => device.id === fiets.id), fiets);
-    assert.deepEqual(listDevices(db).find(device => device.id === printer.id), printer);
-
-    assert.equal(deleteDevice(db, fiets.id), true);
-    assert.deepEqual(listDevices(db), [printer, updated]);
-  } finally {
-    db.close();
-  }
-});
-
-test("Bestaande SQLite-database krijgt aankoopdatumkolom zonder gegevensverlies", () => {
-  const directory = mkdtempSync(path.join(tmpdir(), "maintenance-upgrade-"));
-  const file = path.join(directory, "maintenance.sqlite");
-  try {
-    // Exact het schema van vóór deze uitbreiding.
-    const oldDb = new DatabaseSync(file);
-    oldDb.exec(`
-      CREATE TABLE devices (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        type TEXT NOT NULL,
-        brand TEXT NOT NULL DEFAULT '',
-        model TEXT NOT NULL DEFAULT '',
-        next_maintenance TEXT NOT NULL DEFAULT ''
-      );
-      INSERT INTO devices (name, type, brand, model, next_maintenance)
-      VALUES ('Bestaande fiets', 'fiets', 'Gazelle', '', '');
-    `);
-    oldDb.close();
-
-    const upgraded = openDatabase(file);
-    const before = listDevices(upgraded);
-    assert.equal(before.length, 1);
-    assert.equal(before[0].name, "Bestaande fiets");
-    assert.equal(before[0].purchaseDate, "");
-
-    const edited = updateDevice(upgraded, before[0].id, {
-      name: "Bestaande fiets", type: "fiets", brand: "Gazelle", model: "",
-      nextMaintenance: "", purchaseDate: "2024-06-20"
-    });
-    upgraded.close();
-
-    const reopened = openDatabase(file);
-    assert.deepEqual(listDevices(reopened), [edited]);
-    reopened.close();
-  } finally {
-    rmSync(directory, { recursive: true, force: true });
-  }
-});
-
-test("Een toestel afzonderlijk ophalen geeft de juiste gegevens terug", () => {
-  const db = openDatabase(":memory:");
-  try {
-    const first = addDevice(db, { name: "Fiets", type: "fiets", brand: "Gazelle",
-      model: "Esprit", purchaseDate: "2025-03-10", nextMaintenance: "" });
-    const second = addDevice(db, { name: "Printer", type: "apparaat", brand: "",
-      model: "", purchaseDate: "", nextMaintenance: "" });
-    assert.deepEqual(getDevice(db, first.id), first);
-    assert.deepEqual(getDevice(db, second.id), second);
-    assert.equal(getDevice(db, 999999), null);
-    deleteDevice(db, first.id);
-    assert.equal(getDevice(db, first.id), null);
-  } finally {
-    db.close();
-  }
+    register(db, "hello@example.org");
+    assert.throws(() => register(db, "HELLO@example.org"), /UNIQUE/);
+    assert.equal(db.prepare("SELECT COUNT(*) AS total FROM users").get().total, 1);
+  } finally { db.close(); }
 });

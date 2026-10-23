@@ -4,231 +4,127 @@ import test from "node:test";
 import createApp from "../src/app.js";
 import { openDatabase } from "../src/database.js";
 
-async function request(path, options) {
+async function serverTest(fn) {
   const db = openDatabase(":memory:");
   const server = createApp(db).listen(0, "127.0.0.1");
   try {
     await once(server, "listening");
-    const response = await fetch(`http://127.0.0.1:${server.address().port}${path}`, options);
-    return {
-      status: response.status,
-      contentType: response.headers.get("content-type"),
-      body: await response.text()
-    };
+    await fn(`http://127.0.0.1:${server.address().port}`);
   } finally {
     await new Promise(resolve => server.close(resolve));
     db.close();
   }
 }
-
-test("GET / serves the existing frontend", async () => {
-  const response = await request("/");
-  assert.equal(response.status, 200);
-  assert.match(response.contentType, /text\/html/);
-  assert.match(response.body, /Onderhoudslogboek/);
+const device = name => ({
+  name, type: "fiets", brand: "Gazelle", model: "Esprit",
+  nextMaintenance: "2026-12-01", purchaseDate: "2025-04-18"
 });
-
-test("Express serves the CSS and JavaScript files", async () => {
-  const css = await request("/styles.css");
-  const javascript = await request("/app.js");
-  assert.equal(css.status, 200);
-  assert.match(css.contentType, /text\/css/);
-  assert.equal(javascript.status, 200);
-  assert.match(javascript.contentType, /javascript/);
-});
-
-test("GET /api/health returns a successful JSON response", async () => {
-  const response = await request("/api/health");
-  assert.equal(response.status, 200);
-  assert.match(response.contentType, /application\/json/);
-  assert.deepEqual(JSON.parse(response.body), { status: "ok" });
-});
-
-test("GET /api/devices starts with an empty list", async () => {
-  const response = await request("/api/devices");
-  assert.equal(response.status, 200);
-  assert.deepEqual(JSON.parse(response.body), []);
-});
-
-test("POST /api/devices validates input", async () => {
-  const response = await request("/api/devices", {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name: "", type: "fiets" })
+async function req(base, path, method = "GET", cookie, body, extra = {}) {
+  return fetch(base + path, {
+    method, redirect: "manual",
+    headers: {
+      ...(cookie ? { Cookie: cookie } : {}),
+      ...(body ? { "Content-Type": "application/json" } : {}),
+      ...extra
+    },
+    ...(body ? { body: JSON.stringify(body) } : {})
   });
-  assert.equal(response.status, 400);
-});
+}
+async function register(base, name, email) {
+  const r = await req(base, "/api/auth/register", "POST", null,
+    { name, email, password: "veilig-wachtwoord-123" });
+  assert.equal(r.status, 200);
+  const cookie = r.headers.get("set-cookie");
+  assert.match(cookie, /HttpOnly/i);
+  assert.match(cookie, /SameSite=Lax/i);
+  const user = (await r.json()).user;
+  assert.equal(Object.hasOwn(user, "passwordHash"), false);
+  return cookie.split(";")[0];
+}
 
-test("POST /api/devices writes a device that GET returns", async () => {
-  const db = openDatabase(":memory:");
-  const server = createApp(db).listen(0, "127.0.0.1");
-  try {
-    await once(server, "listening");
-    const base = `http://127.0.0.1:${server.address().port}`;
-    const created = await fetch(`${base}/api/devices`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: "Stadsfiets", type: "fiets", brand: "Gazelle" })
-    });
-    assert.equal(created.status, 201);
-    const device = await created.json();
-    assert.equal(device.name, "Stadsfiets");
-    assert.equal(device.nextMaintenance, "");
-    const response = await fetch(`${base}/api/devices`);
-    assert.deepEqual(await response.json(), [device]);
-  } finally {
-    await new Promise(resolve => server.close(resolve));
-    db.close();
+test("Zonder login worden homepage en alle toestelroutes afgeschermd", () => serverTest(async base => {
+  assert.equal((await req(base, "/")).status, 302);
+  assert.equal((await req(base, "/devices/1")).status, 302);
+  assert.equal((await req(base, "/api/devices")).status, 401);
+  assert.equal((await req(base, "/api/devices/1")).status, 401);
+  assert.equal((await req(base, "/api/devices", "POST", null, device("Fiets"))).status, 401);
+  assert.equal((await req(base, "/api/devices/1", "PUT", null, device("Fiets"))).status, 401);
+  assert.equal((await req(base, "/api/devices/1", "DELETE")).status, 401);
+  assert.equal((await req(base, "/api/auth/me")).status, 401);
+}));
+
+test("Loginpagina, statische bestanden, health en 404 werken", () => serverTest(async base => {
+  assert.equal((await req(base, "/login")).status, 200);
+  for (const file of ["/styles.css", "/app.js", "/device.js", "/login.js", "/auth-client.js"]) {
+    assert.equal((await req(base, file)).status, 200);
   }
-});
+  assert.deepEqual(await (await req(base, "/api/health")).json(), { status: "ok" });
+  assert.equal((await req(base, "/index.html")).status, 302);
+  assert.equal((await req(base, "/does-not-exist")).status, 404);
+}));
 
-test("Unknown routes return HTTP 404", async () => {
-  const response = await request("/does-not-exist");
-  assert.equal(response.status, 404);
-});
+test("Registratie valideert invoer en blokkeert dubbele e-mails", () => serverTest(async base => {
+  assert.equal((await req(base, "/api/auth/register", "POST", null,
+    { name: "A", email: "a@example.org", password: "kort" })).status, 400);
+  const cookie = await register(base, "Alice", "alice@example.org");
+  assert.equal((await req(base, "/api/auth/me", "GET", cookie)).status, 200);
+  assert.equal((await req(base, "/api/auth/register", "POST", null,
+    { name: "A", email: "ALICE@example.org", password: "veilig-wachtwoord-123" })).status, 409);
+}));
 
+test("Inloggen, onjuist wachtwoord en uitloggen werken", () => serverTest(async base => {
+  const first = await register(base, "Alice", "alice@example.org");
+  assert.equal((await req(base, "/api/auth/login", "POST", null,
+    { email: "alice@example.org", password: "fout" })).status, 401);
+  const r = await req(base, "/api/auth/login", "POST", null,
+    { email: "ALICE@example.org", password: "veilig-wachtwoord-123" });
+  assert.equal(r.status, 200);
+  const second = r.headers.get("set-cookie").split(";")[0];
+  assert.equal((await req(base, "/api/auth/me", "GET", second)).status, 200);
+  assert.equal((await req(base, "/api/auth/logout", "POST", second)).status, 204);
+  assert.equal((await req(base, "/api/auth/me", "GET", second)).status, 401);
+  assert.equal((await req(base, "/api/auth/me", "GET", first)).status, 200);
+}));
 
-test("PUT en DELETE passen de toestelgegevens via de API aan", async () => {
-  const db = openDatabase(":memory:");
-  const server = createApp(db).listen(0, "127.0.0.1");
-  try {
-    await once(server, "listening");
-    const base = `http://127.0.0.1:${server.address().port}`;
-    const headers = { "Content-Type": "application/json" };
-    const create = await fetch(`${base}/api/devices`, {
-      method: "POST", headers,
-      body: JSON.stringify({ name: "Fiets", type: "fiets" })
-    });
-    const device = await create.json();
+test("Eigen toestellen toevoegen, lezen, bewerken en verwijderen", () => serverTest(async base => {
+  const cookie = await register(base, "Alice", "alice@example.org");
+  const created = await req(base, "/api/devices", "POST", cookie, device("Stadsfiets"));
+  assert.equal(created.status, 201);
+  const saved = await created.json();
+  assert.equal(saved.purchaseDate, "2025-04-18");
+  assert.deepEqual(await (await req(base, "/api/devices", "GET", cookie)).json(), [saved]);
+  assert.deepEqual(await (await req(base, `/api/devices/${saved.id}`, "GET", cookie)).json(), saved);
+  assert.equal((await req(base, `/devices/${saved.id}`, "GET", cookie)).status, 200);
+  assert.equal((await req(base, `/api/devices/${saved.id}`, "PUT", cookie, device("Racefiets"))).status, 200);
+  assert.equal((await req(base, `/api/devices/${saved.id}`, "DELETE", cookie)).status, 204);
+  assert.equal((await req(base, `/api/devices/${saved.id}`, "GET", cookie)).status, 404);
+  assert.equal((await req(base, `/devices/${saved.id}`, "GET", cookie)).status, 404);
+}));
 
-    const update = await fetch(`${base}/api/devices/${device.id}`, {
-      method: "PUT", headers,
-      body: JSON.stringify({
-        name: "Racefiets", type: "fiets", brand: "Trek",
-        model: "Domane", nextMaintenance: "2026-12-05"
-      })
-    });
-    assert.equal(update.status, 200);
-    const updated = await update.json();
-    assert.equal(updated.id, device.id);
-    assert.equal(updated.name, "Racefiets");
-    assert.deepEqual(await (await fetch(`${base}/api/devices`)).json(), [updated]);
+test("Gebruiker B kan geen toestellen van A benaderen, ook niet via ID", () => serverTest(async base => {
+  const a = await register(base, "Alice", "alice@example.org");
+  const b = await register(base, "Bob", "bob@example.org");
+  const saved = await (await req(base, "/api/devices", "POST", a, device("Privéfiets"))).json();
+  assert.deepEqual(await (await req(base, "/api/devices", "GET", b)).json(), []);
+  assert.equal((await req(base, `/api/devices/${saved.id}`, "GET", b)).status, 404);
+  assert.equal((await req(base, `/devices/${saved.id}`, "GET", b)).status, 404);
+  assert.equal((await req(base, `/api/devices/${saved.id}`, "PUT", b, device("Hack"))).status, 404);
+  assert.equal((await req(base, `/api/devices/${saved.id}`, "DELETE", b)).status, 404);
+  assert.equal((await (await req(base, `/api/devices/${saved.id}`, "GET", a)).json()).name, "Privéfiets");
+  const own = await (await req(base, "/api/devices", "POST", b, device("Fiets Bob"))).json();
+  assert.equal((await req(base, `/api/devices/${own.id}`, "GET", a)).status, 404);
+  assert.equal((await (await req(base, "/api/devices", "GET", b)).json()).length, 1);
+}));
 
-    const deleted = await fetch(`${base}/api/devices/${device.id}`, { method: "DELETE" });
-    assert.equal(deleted.status, 204);
-    assert.equal(deleted.headers.get("content-length"), null);
-    assert.deepEqual(await (await fetch(`${base}/api/devices`)).json(), []);
-    assert.equal((await fetch(`${base}/api/devices/${device.id}`, { method: "DELETE" })).status, 404);
-  } finally {
-    await new Promise(resolve => server.close(resolve));
-    db.close();
-  }
-});
-
-test("PUT en DELETE controleren toestel-ID en invoer", async () => {
-  const db = openDatabase(":memory:");
-  const server = createApp(db).listen(0, "127.0.0.1");
-  try {
-    await once(server, "listening");
-    const base = `http://127.0.0.1:${server.address().port}`;
-    const headers = { "Content-Type": "application/json" };
-    const validDevice = { name: "Fiets", type: "fiets" };
-    const invalidId = await fetch(`${base}/api/devices/abc`, {
-      method: "PUT", headers, body: JSON.stringify(validDevice)
-    });
-    assert.equal(invalidId.status, 400);
-    assert.equal((await fetch(`${base}/api/devices/0`, { method: "DELETE" })).status, 400);
-    assert.equal((await fetch(`${base}/api/devices/999`, {
-      method: "PUT", headers, body: JSON.stringify(validDevice)
-    })).status, 404);
-    assert.equal((await fetch(`${base}/api/devices/1`, {
-      method: "PUT", headers, body: JSON.stringify({ name: "", type: "fiets" })
-    })).status, 400);
-  } finally {
-    await new Promise(resolve => server.close(resolve));
-    db.close();
-  }
-});
-
-test("Aankoopdatum wordt via POST en PUT bewaard en gevalideerd", async () => {
-  const db = openDatabase(":memory:");
-  const server = createApp(db).listen(0, "127.0.0.1");
-  try {
-    await once(server, "listening");
-    const base = `http://127.0.0.1:${server.address().port}`;
-    const headers = { "Content-Type": "application/json" };
-
-    const bad = await fetch(`${base}/api/devices`, {
-      method: "POST", headers,
-      body: JSON.stringify({ name: "Fiets", type: "fiets", purchaseDate: "2026-02-30" })
-    });
-    assert.equal(bad.status, 400);
-
-    const created = await fetch(`${base}/api/devices`, {
-      method: "POST", headers,
-      body: JSON.stringify({ name: "Fiets", type: "fiets", purchaseDate: "2024-06-20" })
-    });
-    assert.equal(created.status, 201);
-    const device = await created.json();
-    assert.equal(device.purchaseDate, "2024-06-20");
-
-    const modified = await fetch(`${base}/api/devices/${device.id}`, {
-      method: "PUT", headers,
-      body: JSON.stringify({ name: "Racefiets", type: "fiets", purchaseDate: "2025-02-14" })
-    });
-    assert.equal(modified.status, 200);
-    assert.equal((await modified.json()).purchaseDate, "2025-02-14");
-    assert.equal((await (await fetch(`${base}/api/devices`)).json())[0].purchaseDate, "2025-02-14");
-  } finally {
-    await new Promise(resolve => server.close(resolve));
-    db.close();
-  }
-});
-
-test("GET /api/devices/:id haalt precies één toestel op", async () => {
-  const db = openDatabase(":memory:");
-  const server = createApp(db).listen(0, "127.0.0.1");
-  try {
-    await once(server, "listening");
-    const base = `http://127.0.0.1:${server.address().port}`;
-    const first = await fetch(`${base}/api/devices`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: "Fiets", type: "fiets", purchaseDate: "2025-03-10" })
-    });
-    const device = await first.json();
-    const response = await fetch(`${base}/api/devices/${device.id}`);
-    assert.equal(response.status, 200);
-    assert.deepEqual(await response.json(), device);
-    assert.equal((await fetch(`${base}/api/devices/999999`)).status, 404);
-    assert.equal((await fetch(`${base}/api/devices/abc`)).status, 400);
-  } finally {
-    await new Promise(resolve => server.close(resolve));
-    db.close();
-  }
-});
-
-test("Eigen toestelpagina werkt als rechtstreekse link", async () => {
-  const db = openDatabase(":memory:");
-  const server = createApp(db).listen(0, "127.0.0.1");
-  try {
-    await once(server, "listening");
-    const base = `http://127.0.0.1:${server.address().port}`;
-    const created = await fetch(`${base}/api/devices`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: "Koffiemachine", type: "apparaat" })
-    });
-    const device = await created.json();
-    const page = await fetch(`${base}/devices/${device.id}`);
-    assert.equal(page.status, 200);
-    assert.match(page.headers.get("content-type"), /text\/html/);
-    assert.match(await page.text(), /id="device-fields"/);
-    const script = await fetch(`${base}/device.js`);
-    assert.equal(script.status, 200);
-    assert.match(await script.text(), /api\/devices/);
-    assert.equal((await fetch(`${base}/devices/999999`)).status, 404);
-    assert.equal((await fetch(`${base}/devices/nope`)).status, 404);
-  } finally {
-    await new Promise(resolve => server.close(resolve));
-    db.close();
-  }
-});
+test("Ongeldige ID, invoer en cross-origin schrijfacties worden geweigerd", () => serverTest(async base => {
+  const cookie = await register(base, "Alice", "alice@example.org");
+  assert.equal((await req(base, "/api/devices/abc", "GET", cookie)).status, 400);
+  assert.equal((await req(base, "/api/devices/0", "DELETE", cookie)).status, 400);
+  assert.equal((await req(base, "/api/devices/999", "PUT", cookie, device("Fiets"))).status, 404);
+  assert.equal((await req(base, "/api/devices", "POST", cookie,
+    { ...device("Fiets"), purchaseDate: "2026-02-30" })).status, 400);
+  assert.equal((await req(base, "/api/devices", "POST", cookie, device("Fiets"),
+    { Origin: "https://evil.example" })).status, 403);
+  assert.equal((await req(base, "/api/devices", "POST", cookie, device("Fiets"),
+    { Origin: base })).status, 201);
+}));
