@@ -23,7 +23,7 @@
 - [x] Een gebruiker kan **meerdere toestellen** beheren.
 - [x] Per toestel basisgegevens opslaan, bijvoorbeeld naam, type, merk, model en aankoopdatum.
 - [x] Per toestel een eigen detailpagina tonen met alle gekoppelde informatie.
-- [ ] Gebruikersgegevens en toestellen gescheiden houden (eenvoudige login en eigen toestellen).
+- [x] Gebruikersgegevens en toestellen gescheiden houden (eenvoudige login en eigen toestellen).
 
 ## 3. Onderhoud, defecten en herstellingen
 

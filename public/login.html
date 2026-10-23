@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f8fa">
+  <title>Inloggen | Onderhoudslogboek</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/login.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="/login">
+        <span class="brand-icon" aria-hidden="true">↻</span>
+        <span>Onderhoudslogboek</span>
+      </a>
+    </div>
+  </header>
+  <main class="container auth-page">
+    <section class="auth-card" aria-labelledby="auth-title">
+      <p class="eyebrow">Jouw persoonlijke werkplaats</p>
+      <h1 id="auth-title">Inloggen</h1>
+      <p id="auth-description" class="section-subtitle">Log in om je eigen toestellen en hun onderhoudsgegevens te beheren.</p>
+      <form id="login-form" class="auth-form">
+        <label class="field" for="login-email">E-mailadres
+          <input id="login-email" name="email" type="email" autocomplete="email" required maxlength="254">
+        </label>
+        <label class="field" for="login-password">Wachtwoord
+          <input id="login-password" name="password" type="password" autocomplete="current-password" required>
+        </label>
+        <button type="submit" class="button button-primary">Inloggen</button>
+      </form>
+      <form id="register-form" class="auth-form" hidden>
+        <label class="field" for="register-name">Naam
+          <input id="register-name" name="name" autocomplete="name" maxlength="70" required>
+        </label>
+        <label class="field" for="register-email">E-mailadres
+          <input id="register-email" name="email" type="email" autocomplete="email" maxlength="254" required>
+        </label>
+        <label class="field" for="register-password">Wachtwoord (minstens 10 tekens)
+          <input id="register-password" name="password" type="password" autocomplete="new-password" minlength="10" maxlength="128" required>
+        </label>
+        <button type="submit" class="button button-primary">Account aanmaken</button>
+      </form>
+      <p id="auth-error" class="form-error" role="alert" hidden></p>
+      <p class="auth-switch">
+        <span id="switch-description">Nog geen account?</span>
+        <button id="switch-mode" type="button" class="detail-button">Registreren</button>
+      </p>
+    </section>
+  </main>
+  <footer class="container footer">Web Programming · Project 2026–2027</footer>
+</body>
+</html>

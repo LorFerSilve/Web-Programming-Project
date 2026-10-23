@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#f7f8fa">
   <title>Onderhoudslogboek | Mijn toestellen</title>
   <link rel="stylesheet" href="styles.css">
+  <script src="/auth-client.js" defer></script>
   <script src="app.js" defer></script>
 </head>
 <body>
@@ -20,7 +21,10 @@
         <a href="#dashboard">Overzicht</a>
         <a href="#devices">Toestellen</a>
       </nav>
-      <span class="mode-label">SQLite-opslag</span>
+      <div class="account-nav">
+        <span id="current-user" class="mode-label"></span>
+        <button id="logout-button" class="button button-secondary logout-button" type="button">Uitloggen</button>
+      </div>
     </div>
   </header>
 

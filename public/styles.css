@@ -172,3 +172,28 @@ h2 { margin-bottom: 6px; font-size: 23px; letter-spacing: -.03em; }
   .detail-panel { padding: 20px; }
   .detail-panel .details { grid-template-columns: minmax(110px, 1fr) 1.2fr; }
 }
+
+/* Gebruikersnavigatie en inlog-/registratiescherm. */
+.account-nav { margin-left: auto; display: flex; align-items: center; gap: 10px; min-width: 0; }
+.account-nav .mode-label { margin-left: 0; overflow: hidden; text-overflow: ellipsis; }
+.logout-button { padding: 7px 12px; }
+.auth-page { display: grid; place-items: center; min-height: 65vh; padding-block: 48px; }
+.auth-card { width: min(100%, 445px); background: #fff; border: 1px solid #e4e9ef; border-radius: 17px; padding: 32px; box-shadow: 0 8px 30px #1723380c; }
+.auth-card h1 { margin-bottom: 10px; }
+.auth-card .section-subtitle { margin-bottom: 23px; }
+.auth-form { display: grid; gap: 18px; }
+.auth-form[hidden] { display: none; }
+.auth-form .button { width: 100%; margin-top: 4px; }
+.auth-card .form-error { margin-top: 16px; }
+.auth-switch { margin: 22px 0 0; text-align: center; color: #627083; font-size: 14px; }
+.auth-switch .detail-button { margin-left: 6px; min-height: 44px; }
+@media (max-width: 630px) {
+  .account-nav { order: 2; margin-left: auto; }
+  .account-nav .mode-label { max-width: 145px; }
+  .main-nav { order: 3; }
+}
+@media (max-width: 390px) {
+  .account-nav { width: 100%; order: 3; justify-content: space-between; }
+  .main-nav { order: 4; }
+  .auth-card { padding: 22px; }
+}

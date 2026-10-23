@@ -129,3 +129,38 @@ Een niet-bestaand toestel levert een HTTP 404 op.
 De onderdelen **onderhoudshistoriek** en **foto's/documenten/links** hebben al
 een duidelijke plaats op de pagina; de daadwerkelijke registraties en bijlagen
 volgen in de latere checklistonderdelen. Er worden nog geen fictieve gegevens getoond.
+
+## Gebruikers en toegangscontrole
+
+Maak na de eerste opstart via **http://localhost:3000/login** je eerste
+account aan (naam, e-mailadres, wachtwoord van minstens 10 tekens).
+Daarna kun je inloggen, uitloggen en uitsluitend je eigen toestellen beheren.
+
+**Migratie van bestaande gegevens:** bij de allereerste registratie krijgt
+het eerste account automatisch de toestellen die vóór de invoering van
+accounts zijn aangemaakt. De SQLite-migratie bewaart hun ID en gegevens.
+**Registreer daarom zelf het eerste account voordat je andere gebruikers
+toegang geeft tot je lokale installatie.** Dit is bedoeld voor de overgang
+van een bestaande, voorheen eenpersoonsdatabase; plaats de applicatie niet
+publiek online vóór deze eerste registratie. Nieuwe accounts krijgen een
+lege toestellenlijst.
+
+Wachtwoorden worden niet als platte tekst bewaard: de backend gebruikt
+een unieke salt en `scrypt`. Sessies worden opgeslagen in SQLite en
+geïdentificeerd via een willekeurige, gehashte token. De browser ontvangt
+een `HttpOnly`-/`SameSite=Lax`-cookie (zeven dagen geldig). Uitloggen
+maakt de sessie ongeldig. Alle toestel-API's, inclusief rechtstreeks
+ophalen, bewerken en verwijderen, controleren de ingelogde gebruiker.
+
+API-overzicht:
+- `POST /api/auth/register` — nieuw account (`name`, `email`, `password`);
+- `POST /api/auth/login` — aanmelden (`email`, `password`);
+- `GET /api/auth/me` — huidige gebruiker;
+- `POST /api/auth/logout` — sessie verwijderen;
+- `/api/devices` en `/api/devices/:id` vereisen altijd een sessie.
+
+**Beveiligingsgrens:** deze configuratie is geschikt voor lokale ontwikkeling
+en demonstratie. Zet haar niet rechtstreeks op het publieke internet zonder
+HTTPS, een passende reverse proxy en aanvullende beveiliging zoals
+aanmeldpogingbeperking. Er is in deze projectfase geen
+wachtwoordherstel of e-mailverificatie.

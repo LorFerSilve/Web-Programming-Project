@@ -90,6 +90,7 @@ async function loadDevice() {
   }
   try {
     const response = await fetch(`/api/devices/${deviceId}`);
+    if (response.status === 401) { window.location.replace("/login"); return; }
     if (response.status === 404) {
       showError("Dit toestel bestaat niet meer. Ga terug naar het overzicht.");
       return;

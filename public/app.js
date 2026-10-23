@@ -113,6 +113,7 @@ typeFilter.addEventListener("change", render);
 async function loadDevices() {
   try {
     const response = await fetch("/api/devices");
+    if (response.status === 401) { window.location.replace("/login"); return; }
     if (!response.ok) throw new Error("Ophalen mislukt");
     const data = await response.json();
     if (!Array.isArray(data)) throw new Error("Ongeldig antwoord van de server");
